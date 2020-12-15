@@ -1,4 +1,4 @@
 hmmlearn
 matplotlib
 numpy
-pandas
+midiutil

@@ -101,6 +101,10 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+input/
+!input/F.txt
+output/
+
 # SageMath parsed files
 *.sage.py
 .idea

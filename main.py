@@ -1,74 +1,71 @@
-import datetime
-import warnings
 import numpy as np
-from matplotlib import cm, pyplot as plt
-from matplotlib.dates import YearLocator, MonthLocator
+from matplotlib import pyplot as plt
 from hmmlearn.hmm import GaussianHMM
-import pandas as pd
+import csv
+from os import path
 
 
-def fitHMM(input_data, n_samples):
-    # fit Gaussian HMM to Q
-    model = GaussianHMM(n_components=2, n_iter=1000).fit(input_data)
+def fit_model(data, n_components):
+    hmm = GaussianHMM(n_components=n_components)
+    hmm.fit(data)
+    return hmm, hmm.score(data)
 
-    # classify each observation as state 0 or 1
-    hidden_states = model.predict(input_data)
 
-    # find parameters of Gaussian HMM
-    mus = np.array(model.means_)
-    sigmas = np.array(np.sqrt(np.array([np.diag(model.covars_[0]), np.diag(model.covars_[1])])))
-    P = np.array(model.transmat_)
+def best_model(data):
+    # 17, 3100
+    best_score = float('-inf')
+    best_param = (None, None)
+    scores = []
 
-    # find log-likelihood of Gaussian HMM
-    logProb = model.score(input_data)
+    for n_components in np.arange(1, 40, 1):
+        # for n_iter in np.arange(100, 200, 500):
+        print(f"Trying {n_components}")
+        fit_iters = 3
+        avg_score = 0
+        hmm = None
+        for i in range(fit_iters):
+            hmm, score = fit_model(data, n_components)
+            avg_score += score
+        # Score doesn't take complexity of model into account afaik,
+        # but when I use Bayesian Information Criterion it says n_components=1 is best,
+        # However visually this looks trash
+        avg_score /= fit_iters
+        scores.append((n_components, avg_score))
+        if avg_score > best_score:
+            print(f"Found new better model at n_components: {n_components}, score: {avg_score}")
+            best_score = avg_score
+            best_param = n_components, hmm
 
-    # generate nSamples from Gaussian HMM
-    samples = model.sample(n_samples)
-
-    # re-organize mus, sigmas and P so that first row is lower mean (if not already)
-    if mus[0] > mus[1]:
-        mus = np.flipud(mus)
-        sigmas = np.flipud(sigmas)
-        P = np.fliplr(np.flipud(P))
-        hidden_states = 1 - hidden_states
-
-    return hidden_states, mus, sigmas, P, logProb, samples
+    print(best_score, best_param)
+    _, hmm = best_param
+    return hmm, scores
 
 
 def main():
-    input_data = np.loadtxt("F.txt")
-    logQ = np.log(input_data)
-    hidden_states, mus, sigmas, P, logProb, samples = fitHMM(logQ, 100)
+    input_data = np.loadtxt(path.join('input', 'F.txt'))
+    hmm, _ = fit_model(input_data, 35)
 
-    # todo run with multiple initializations and take best model (score())
-    # also add years to input
-    plt.figure()
-    plt.title("Data")
-    plt.plot(input_data)
-    plt.show()
+    fig, axs = plt.subplots(2, 2)
+    # hmm, scores = best_model(input_data)
+    # axs[0, 1].set_title("Scores")
+    # axs[0, 1].plot(scores)
+    # print(scores)
 
-    hmm = GaussianHMM(n_components=5, n_iter=1000)
-    hmm.fit(input_data)
-    print(f"Converged? {hmm.monitor_.converged}")
-    samples = hmm.sample(200)
-    plt.figure()
-    plt.title("Samples")
-    plt.plot(samples[0])
+    axs[0, 0].set_title("Data")
+    axs[0, 0].plot(input_data)
+
+    samples = hmm.sample(500)
+    axs[1, 0].set_title("Samples")
+    axs[1, 0].plot(samples[0])
+    print(samples[0])
+
     plt.show()
-    print(samples)
-    #
-    # num_samples = 300
-    # samples, _ = hmm.sample(num_samples)
-    #
-    # plt.figure()
-    # plt.title('Difference percentages')
-    # plt.plot(np.arange(num_samples), samples[:, 0], c='black')
-    #
-    # plt.figure()
-    # plt.title('Volume of shares')
-    # plt.plot(np.arange(num_samples), samples[:, 1], c='black')
-    # plt.ylim(ymin=0)
-    # plt.show()
+    with open(path.join('input', 'out.txt'), mode='w', newline="") as out_file:
+        csv_writer = csv.writer(out_file, delimiter='\t')
+
+        for sample in samples[0]:
+            notes = np.round(sample).astype(int)
+            csv_writer.writerow(notes)
 
 
 if __name__ == '__main__':
