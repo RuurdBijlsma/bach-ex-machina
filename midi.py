@@ -5,32 +5,29 @@ import cv2
 
 
 def to_midi(arr, midi_path):
-    n_tracks = (arr != 0).sum(axis=0).max()
     bpm = 96
-    ticks_per_seconds = second2tick(1, bpm, 500000)
+    ticks_per_second = second2tick(1, bpm, 500000)
 
-    mid = MidiFile()
-    tracks = list(map(lambda x: MidiTrack(), range(n_tracks * 2)))
+    mid = MidiFile(type=1, ticks_per_beat=bpm)
+
+    tracks = list(map(lambda x: MidiTrack(), range(128)))
     prev_column = np.zeros(128, np.int8)
-    recent_velocity_changes = np.zeros(len(tracks), np.int8)
+    recent_velocity_changes = np.zeros(len(tracks), int)
     for t, column in enumerate(arr.T):
-        column_track_index = 0
         difference = column - prev_column
         for note, velocity_change in enumerate(difference):
             if velocity_change == 0:
                 continue
-            time_since_last_change = t - recent_velocity_changes[column_track_index]
-            time = round(time_since_last_change / 16 * ticks_per_seconds)
-            print(time_since_last_change)
+            custom_ticks_since_last_change = t - recent_velocity_changes[note]
+            midi_ticks_since_last_change = round(custom_ticks_since_last_change / 16 * ticks_per_second)
 
             if column[note] == 0:
-                message = Message('note_off', note=note, velocity=0, time=time)
+                message = Message('note_off', note=note, velocity=0, time=midi_ticks_since_last_change)
             else:
-                message = Message('note_on', note=note, velocity=column[note], time=time)
+                message = Message('note_on', note=note, velocity=column[note], time=midi_ticks_since_last_change)
 
-            recent_velocity_changes[column_track_index] = t
-            tracks[column_track_index].append(message)
-            column_track_index += 1
+            recent_velocity_changes[note] = t
+            tracks[note].append(message)
         prev_column = column
 
     for track in tracks:
@@ -57,13 +54,10 @@ def from_midi(midi_path, img_output='output/arr.png'):
         arr[note.value, note.time:] = note.velocity
 
     cv2.imwrite(img_output, arr)
-    # print(arr)
     return arr
 
 
 if __name__ == '__main__':
+    # Round trip:
     arr = from_midi("output/unfin.midi")
     to_midi(arr, 'output/unfin_result.midi')
-
-    # from_midi("output/unfin_result.midi", 'output/unfin_result.png')
-    # from_midi("output/unfin.midi", 'output/unfin.png')
