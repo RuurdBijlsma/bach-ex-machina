@@ -35,7 +35,7 @@ def to_midi(arr, midi_path):
     mid.save(midi_path)
 
 
-def from_midi(midi_path, img_output='output/arr.png'):
+def from_midi(midi_path, img_output='data/arr.png'):
     Note = namedtuple('Note', 'value time velocity')
     a = MidiFile(midi_path)
     time = 0
@@ -59,5 +59,5 @@ def from_midi(midi_path, img_output='output/arr.png'):
 
 if __name__ == '__main__':
     # Round trip:
-    arr = from_midi("output/unfin.midi")
-    to_midi(arr, 'output/unfin_result.midi')
+    arr = from_midi("data/unfin.midi")
+    to_midi(arr, 'data/unfin_result.midi')

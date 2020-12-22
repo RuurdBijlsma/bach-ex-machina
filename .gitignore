@@ -1,11 +1,3 @@
-input/
-output/
-!F.txt
-!zeppelin.mid
-!unfin.midi
-
-
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
