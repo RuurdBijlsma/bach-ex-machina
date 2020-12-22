@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 
 Encoded = namedtuple('Encoded', 'data key_signature time_signature bpm')
+custom_ticks_per_second = 16
 
 
 def get_metadata_track(tempo, encoded):
@@ -31,7 +32,8 @@ def to_midi(encoded, midi_path):
             if velocity_change == 0:
                 continue
             custom_ticks_since_last_change = t - recent_velocity_changes[note]
-            midi_ticks_since_last_change = round(custom_ticks_since_last_change / 16 * ticks_per_second)
+            midi_ticks_since_last_change = round(
+                custom_ticks_since_last_change / custom_ticks_per_second * ticks_per_second)
 
             if column[note] == 0:
                 message = Message('note_off', note=note, velocity=0, time=midi_ticks_since_last_change)
@@ -62,7 +64,7 @@ def from_midi(midi_path, img_output='data/arr.png'):
         elif msg.type == 'time_signature':
             time_signature = msg
         elif msg.type == 'note_on' or msg.type == 'note_off':
-            t = int(time * 16)
+            t = int(time * custom_ticks_per_second)
             max_t = t if t > max_t else max_t
             v = msg.velocity if msg.type == 'note_on' else 0
             notes.append(Note(msg.note, t, v))
@@ -76,10 +78,12 @@ def from_midi(midi_path, img_output='data/arr.png'):
 
 
 if __name__ == '__main__':
-    # Round trip:
-    encoded = from_midi("data/unfin.midi")
+    # encoded = from_midi("data/unfin.midi")
+    # print("Midi -> Encoded")
+    # to_midi(encoded, 'data/unfin_result.midi')
+    # print("Encoded -> Midi")
+
+    encoded = from_midi("data/zeppelin.mid")
     print("Midi -> Encoded")
-    to_midi(encoded, 'data/unfin_result.midi')
+    to_midi(encoded, 'data/zeppelin_result.midi')
     print("Encoded -> Midi")
-    # encoded = from_midi("data/zeppelin.mid")
-    # to_midi(encoded, 'data/zeppelin_result.midi')

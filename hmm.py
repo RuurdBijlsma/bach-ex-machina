@@ -3,12 +3,14 @@ from matplotlib import pyplot as plt
 from hmmlearn.hmm import GaussianHMM
 import csv
 from os import path
+from midi import from_midi, to_midi, Encoded
+import pickle
 
 
 def fit_model(data, n_components):
-    hmm = GaussianHMM(n_components=n_components)
+    hmm = GaussianHMM(n_components=n_components, covariance_type='full', n_iter=100)
     hmm.fit(data)
-    return hmm, hmm.score(data)
+    return hmm
 
 
 def best_model(data):
@@ -24,8 +26,8 @@ def best_model(data):
         avg_score = 0
         hmm = None
         for i in range(fit_iters):
-            hmm, score = fit_model(data, n_components)
-            avg_score += score
+            hmm = fit_model(data, n_components)
+            avg_score += hmm.score(data)
         # todo try bayesian information criterion for selecting best model to take into account the complexity
         avg_score /= fit_iters
         scores.append((n_components, avg_score))
@@ -39,31 +41,36 @@ def best_model(data):
     return hmm, scores
 
 
+def create_model(input_data, n_components):
+    hmm = fit_model(input_data, n_components)
+    with open(f"data/hmm_{n_components}.pkl", "wb") as file:
+        pickle.dump(hmm, file)
+        print("Exported model to file!")
+    return hmm
+
+
+def load_model(n_components):
+    with open(f"data/hmm_{n_components}.pkl", "rb") as file:
+        print("Imported model from file!")
+        return pickle.load(file)
+
+
 def main():
-    input_data = np.loadtxt(path.join('input', 'F.txt'))
-    hmm, _ = fit_model(input_data, 35)
+    n_components = 45
 
-    fig, axs = plt.subplots(2, 2)
-    # hmm, scores = best_model(input_data)
-    # axs[0, 1].set_title("Scores")
-    # axs[0, 1].plot(scores)
-    # print(scores)
+    encoded = from_midi('data/unfin.midi')
+    input_data = encoded.data.T
+    # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
-    axs[0, 0].set_title("Data")
-    axs[0, 0].plot(input_data)
+    # model = create_model(input_data, n_components)
+    model = load_model(n_components)
 
-    samples = hmm.sample(500)
-    axs[1, 0].set_title("Samples")
-    axs[1, 0].plot(samples[0])
-    print(samples[0])
+    samples = model.sample(500)[0]
 
-    plt.show()
-    with open(path.join('input', 'out.txt'), mode='w', newline="") as out_file:
-        csv_writer = csv.writer(out_file, delimiter='\t')
-
-        for sample in samples[0]:
-            notes = np.round(sample).astype(int)
-            csv_writer.writerow(notes)
+    print(samples)
+    samples_data = np.rint(samples.T).astype(int).clip(0, 127)
+    sample_encoded = Encoded(samples_data, encoded.key_signature, encoded.time_signature, encoded.bpm)
+    to_midi(sample_encoded, "data/predicted.midi")
 
 
 if __name__ == '__main__':
