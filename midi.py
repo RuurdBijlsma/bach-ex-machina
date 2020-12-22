@@ -1,88 +1,57 @@
-import os
-from typing import Iterable, Any
-from midiutil import MIDIFile
+from mido import MidiFile, MidiTrack, tick2second, second2tick
+from collections import namedtuple
+import numpy as np
+import math
+import cv2
+
+Note = namedtuple('Note', 'value time velocity')
 
 
-def rle(items: Iterable[Any]) -> Iterable[Any]:
-    iterator = iter(items)
-    current = next(iterator)
-    count = 1
-
-    try:
-        while True:
-            next_val = next(iterator)
-            if next_val == current:
-                count += 1
-            else:
-                yield current, count
-                current = next_val
-                count = 1
-    except StopIteration:
-        yield current, count
-        return
+def track_to_notes(track):
+    time = 0
+    notes = []
+    for msg in track:
+        time += msg.time
+        if msg.type == 'note_on' or msg.type == 'note_off':
+            notes.append(Note(msg.note, time, msg.velocity if msg.type == 'note_on' else 0))
+    return notes
 
 
-def main():
-    file = 'out.txt'
-    path = os.path.join('input', file)
-    root, _ = os.path.splitext(file)
+def notes_to_array(tick_duration):
+    def x(notes):
+        arr = np.zeros((128, tick_duration), np.int8)
+        for note in notes:
+            arr[note.value, note.time:] = note.velocity
 
-    with open(path) as f:
-        lines = f.readlines()
+        return arr
 
-    tracks = list(zip(
-        *(
-            (
-                int(note.strip())
-                for note
-                in line.split('\t')
-            )
-            for line
-            in lines
-        )
-    ))
+    return x
 
-    channel = 0
-    time = 0  # In beats
-    duration = 1  # In beats
-    tempo = 70  # In BPM
-    volume = 127  # 0-127, as per the MIDI standard
 
-    for a, b in zip(tracks, tracks[1:]):
-        len_a = sum(count for _, count in rle(a))
-        len_b = sum(count for _, count in rle(b))
+def from_midi(midi_path):
+    a = MidiFile(midi_path)
+    tempo = get_tempo(a)
+    tick_duration = math.ceil(second2tick(a.length, a.ticks_per_beat, tempo))
+    notes_data = list(filter(lambda x: x, map(track_to_notes, a.tracks)))
+    array_data = list(map(notes_to_array(tick_duration), notes_data))
 
-        print(len_a, len_b)
-        assert len_a == len_b
+    for i, arr in enumerate(array_data):
+        cv2.imwrite(f"output/img{i}.png", arr)
 
-    # tracks = [tracks[0]]
+    print("done")
 
-    midi = MIDIFile(len(tracks))
-    for i, track in enumerate(tracks):
-        midi.addTempo(i, time, tempo)
 
-        for j, (pitch, count) in enumerate(rle(track)):
-            print('j', i, repr(j), repr(pitch), count)
-
-            # pitch 0 means silence
-            midi.addNote(i, channel, pitch, time + j, duration * count, volume if pitch > 0 else 0)
-
-    midi_path = os.path.join('output', f'{root}.midi')
-    print(f'Writing {midi_path}')
-
-    with open(midi_path, 'wb') as output_file:
-        midi.writeFile(output_file)
-
-    # ogg_path = os.path.join('output', f'{root}.ogg')
-    # print(f'Writing {ogg_path}')
-    # os.system('fluidsynth '
-    #           '-nli '
-    #           '-r 48000 '
-    #           '-o synth.cpu-cores=4 '
-    #           '-T oga '
-    #           f'-F {ogg_path} '
-    #           f'/usr/share/soundfonts/FluidR3_GM.sf2 {midi_path}')
+def get_tempo(midi_file):
+    for track in midi_file.tracks:
+        for note in track:
+            if note.type == "set_tempo":
+                return note.tempo
+    return 50000
 
 
 if __name__ == '__main__':
-    main()
+    from_midi("output/unfin.midi")
+    # from_midi("output/zeppelin.mid")
+    # a = np.zeros((10, 10), np.int8)
+    # a[1, 5:] = 30
+    # print(a)

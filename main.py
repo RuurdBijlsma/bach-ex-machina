@@ -26,9 +26,7 @@ def best_model(data):
         for i in range(fit_iters):
             hmm, score = fit_model(data, n_components)
             avg_score += score
-        # Score doesn't take complexity of model into account afaik,
-        # but when I use Bayesian Information Criterion it says n_components=1 is best,
-        # However visually this looks trash
+        # todo try bayesian information criterion for selecting best model to take into account the complexity
         avg_score /= fit_iters
         scores.append((n_components, avg_score))
         if avg_score > best_score:

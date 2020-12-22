@@ -104,6 +104,8 @@ celerybeat.pid
 input/
 !input/F.txt
 output/
+!output/unfin.midi
+!output/zeppelin.mid
 
 # SageMath parsed files
 *.sage.py

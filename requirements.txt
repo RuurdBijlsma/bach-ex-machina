@@ -2,3 +2,4 @@ hmmlearn
 matplotlib
 numpy
 midiutil
+mido
