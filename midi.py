@@ -3,41 +3,29 @@ from collections import namedtuple
 import numpy as np
 import cv2
 
+Encoded = namedtuple('Encoded', 'data key_signature time_signature bpm')
 
-def get_metadata_track(tempo):
+
+def get_metadata_track(tempo, encoded):
     meta_track = MidiTrack()
-    meta_track.append(MetaMessage('time_signature',
-                                  numerator=4,
-                                  denominator=4,
-                                  clocks_per_click=24,
-                                  notated_32nd_notes_per_beat=8,
-                                  time=0,
-                                  ))
-    meta_track.append(MetaMessage('key_signature',
-                                  key='F',
-                                  time=0,
-                                  ))
-    meta_track.append(MetaMessage('set_tempo',
-                                  tempo=tempo,
-                                  time=0,
-                                  ))
+    meta_track.append(encoded.time_signature)
+    meta_track.append(encoded.key_signature)
+    meta_track.append(MetaMessage('set_tempo', tempo=tempo, time=0))
     return meta_track
 
 
-def to_midi(arr, midi_path):
-    # BPM here is a guess
-    bpm = 96
+def to_midi(encoded, midi_path):
     # Tempo is not
     tempo = 500000
-    ticks_per_second = second2tick(1, bpm, tempo)
+    ticks_per_second = second2tick(1, encoded.bpm, tempo)
 
-    mid = MidiFile(type=1, ticks_per_beat=bpm)
-    mid.tracks.append(get_metadata_track(tempo))
+    mid = MidiFile(type=1, ticks_per_beat=encoded.bpm)
+    mid.tracks.append(get_metadata_track(tempo, encoded))
 
     tracks = list(map(lambda x: MidiTrack(), range(128)))
     prev_column = np.zeros(128, np.int8)
     recent_velocity_changes = np.zeros(len(tracks), int)
-    for t, column in enumerate(arr.T):
+    for t, column in enumerate(encoded.data.T):
         difference = column - prev_column
         for note, velocity_change in enumerate(difference):
             if velocity_change == 0:
@@ -61,29 +49,37 @@ def to_midi(arr, midi_path):
 
 def from_midi(midi_path, img_output='data/arr.png'):
     Note = namedtuple('Note', 'value time velocity')
-    a = MidiFile(midi_path)
+    mid = MidiFile(midi_path)
+    key_signature = None
+    time_signature = None
     time = 0
     notes = []
     max_t = 0
-    for msg in a:
+    for msg in mid:
         time += msg.time
-        if msg.type == 'note_on' or msg.type == 'note_off':
+        if msg.type == 'key_signature':
+            key_signature = msg
+        elif msg.type == 'time_signature':
+            time_signature = msg
+        elif msg.type == 'note_on' or msg.type == 'note_off':
             t = int(time * 16)
             max_t = t if t > max_t else max_t
             v = msg.velocity if msg.type == 'note_on' else 0
             notes.append(Note(msg.note, t, v))
 
-    arr = np.zeros((128, max_t), np.int8)
+    data = np.zeros((128, max_t), np.int8)
     for note in notes:
-        arr[note.value, note.time:] = note.velocity
+        data[note.value, note.time:] = note.velocity
 
-    cv2.imwrite(img_output, arr)
-    return arr
+    cv2.imwrite(img_output, data)
+    return Encoded(data, key_signature, time_signature, mid.ticks_per_beat)
 
 
 if __name__ == '__main__':
     # Round trip:
-    # arr = from_midi("data/unfin.midi")
-    # to_midi(arr, 'data/unfin_result.midi')
-    arr = from_midi("data/zeppelin.mid")
-    to_midi(arr, 'data/zeppelin_result.midi')
+    encoded = from_midi("data/unfin.midi")
+    print("Midi -> Encoded")
+    to_midi(encoded, 'data/unfin_result.midi')
+    print("Encoded -> Midi")
+    # encoded = from_midi("data/zeppelin.mid")
+    # to_midi(encoded, 'data/zeppelin_result.midi')
