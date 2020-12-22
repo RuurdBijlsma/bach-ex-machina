@@ -32,7 +32,7 @@ def to_midi(arr, midi_path):
     ticks_per_second = second2tick(1, bpm, tempo)
 
     mid = MidiFile(type=1, ticks_per_beat=bpm)
-    # mid.add_track(get_metadata_track(tempo))
+    mid.tracks.append(get_metadata_track(tempo))
 
     tracks = list(map(lambda x: MidiTrack(), range(128)))
     prev_column = np.zeros(128, np.int8)
