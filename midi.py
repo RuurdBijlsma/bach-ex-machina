@@ -1,14 +1,38 @@
-from mido import MidiFile, MidiTrack, Message, second2tick
+from mido import MidiFile, MidiTrack, Message, MetaMessage, second2tick
 from collections import namedtuple
 import numpy as np
 import cv2
 
 
+def get_metadata_track(tempo):
+    meta_track = MidiTrack()
+    meta_track.append(MetaMessage('time_signature',
+                                  numerator=4,
+                                  denominator=4,
+                                  clocks_per_click=24,
+                                  notated_32nd_notes_per_beat=8,
+                                  time=0,
+                                  ))
+    meta_track.append(MetaMessage('key_signature',
+                                  key='F',
+                                  time=0,
+                                  ))
+    meta_track.append(MetaMessage('set_tempo',
+                                  tempo=tempo,
+                                  time=0,
+                                  ))
+    return meta_track
+
+
 def to_midi(arr, midi_path):
+    # BPM here is a guess
     bpm = 96
-    ticks_per_second = second2tick(1, bpm, 500000)
+    # Tempo is not
+    tempo = 500000
+    ticks_per_second = second2tick(1, bpm, tempo)
 
     mid = MidiFile(type=1, ticks_per_beat=bpm)
+    # mid.add_track(get_metadata_track(tempo))
 
     tracks = list(map(lambda x: MidiTrack(), range(128)))
     prev_column = np.zeros(128, np.int8)
@@ -59,5 +83,7 @@ def from_midi(midi_path, img_output='data/arr.png'):
 
 if __name__ == '__main__':
     # Round trip:
-    arr = from_midi("data/unfin.midi")
-    to_midi(arr, 'data/unfin_result.midi')
+    # arr = from_midi("data/unfin.midi")
+    # to_midi(arr, 'data/unfin_result.midi')
+    arr = from_midi("data/zeppelin.mid")
+    to_midi(arr, 'data/zeppelin_result.midi')
