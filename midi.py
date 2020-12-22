@@ -1,4 +1,4 @@
-from mido import MidiFile, MidiTrack, Message, second2tick, tick2second
+from mido import MidiFile, MidiTrack, Message, second2tick
 from collections import namedtuple
 import numpy as np
 import cv2
