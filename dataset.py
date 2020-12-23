@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
 
     def count(gen):
-        sum(1 for _ in gen)
+        return sum(1 for _ in gen)
 
 
     print('train', count(ds.train))
