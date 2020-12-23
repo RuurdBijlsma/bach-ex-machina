@@ -1,6 +1,5 @@
 hmmlearn
 matplotlib
 numpy
-midiutil
 mido
 opencv-python

@@ -1,8 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
 from hmmlearn.hmm import GaussianHMM
-import csv
-from os import path
 from midi import from_midi, to_midi, Encoded
 import pickle
 
