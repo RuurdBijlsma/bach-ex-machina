@@ -15,38 +15,78 @@ def get_metadata_track(tempo, encoded):
     return meta_track
 
 
+def to_relative_ticks(ticks_per_second, t, prev_t):
+    t_since_last_change = t - prev_t
+    return round(t_since_last_change / custom_ticks_per_second * ticks_per_second)
+
+
+# This extracts a continuous note from the given array and returns the corresponding messages
+def pop_hold_at(data, start_t, note, prev_t, tps):
+    start_velocity = 0
+    end_t = start_t
+    messages = []
+
+    row_from_t = data[start_t:, note]
+    # This `t` starts at 0, so not an absolute value for t
+    for t, velocity in enumerate(row_from_t):
+        # If it's been processed remove from array
+        row_from_t[t] = 0
+        if velocity == start_velocity:
+            continue
+        elif velocity == 0:
+            end_t = start_t + t
+            time = to_relative_ticks(tps, start_t + t, prev_t)
+            messages.append(Message('note_off', note=note, velocity=0, time=time))
+            break
+        else:
+            # Note start or note velocity change within this hold
+            time = to_relative_ticks(tps, start_t + t, prev_t)
+            prev_t = start_t + t
+            start_velocity = velocity
+            messages.append(Message('note_on', note=note, velocity=velocity, time=time))
+
+    return messages, end_t
+
+
 def to_midi(encoded, midi_path):
-    # Tempo is not
     tempo = 500000
-    ticks_per_second = second2tick(1, encoded.bpm, tempo)
+    tps = second2tick(1, encoded.bpm, tempo)
 
     mid = MidiFile(type=1, ticks_per_beat=encoded.bpm)
     mid.tracks.append(get_metadata_track(tempo, encoded))
+    data = encoded.data.T.copy()
+    n_tracks = (data != 0).sum(axis=1).max()
 
-    tracks = list(map(lambda x: MidiTrack(), range(128)))
-    prev_column = np.zeros(128, np.int8)
-    recent_velocity_changes = np.zeros(len(tracks), int)
-    for t, column in enumerate(encoded.data.T):
-        difference = column - prev_column
-        for note, velocity_change in enumerate(difference):
-            if velocity_change == 0:
-                continue
-            custom_ticks_since_last_change = t - recent_velocity_changes[note]
-            midi_ticks_since_last_change = round(
-                custom_ticks_since_last_change / custom_ticks_per_second * ticks_per_second)
-
-            if column[note] == 0:
-                message = Message('note_off', note=note, velocity=0, time=midi_ticks_since_last_change)
-            else:
-                message = Message('note_on', note=note, velocity=column[note], time=midi_ticks_since_last_change)
-
-            recent_velocity_changes[note] = t
-            tracks[note].append(message)
-        prev_column = column
-
-    for track in tracks:
+    for track_index in range(0, n_tracks):
+        start_search = (0, 0)
+        track = MidiTrack()
+        while start_search[0] < len(data):
+            found_bar = False
+            # print(start_search)
+            for t in range(start_search[0], len(data)):
+                column = data[t]
+                prev_column = data[t - 1] if t > 0 else np.zeros(128, np.int8)
+                for note in range(start_search[1], len(column)):
+                    velocity = column[note]
+                    prev_velocity = prev_column[note]
+                    if velocity > 0 and prev_velocity == 0:
+                        # Found start of a hold (needs to be actual start of that hold bar)
+                        # Pass start_search[0] because that's what the time attribute needs to be relative to
+                        messages, hold_end_t = pop_hold_at(data, t, note, start_search[0], tps)
+                        for message in messages:
+                            track.append(message)
+                        # Search for a new hold bar starting at this point
+                        start_search = (hold_end_t, 0)
+                        found_bar = True
+                        break
+                if found_bar:
+                    break
+            if not found_bar:
+                break
         mid.tracks.append(track)
+
     mid.save(midi_path)
+    print(f"✅ Encoded -> Midi ({midi_path})")
 
 
 def from_midi(midi_path, img_output='data/arr.png'):
@@ -74,16 +114,12 @@ def from_midi(midi_path, img_output='data/arr.png'):
         data[note.value, note.time:] = note.velocity
 
     cv2.imwrite(img_output, data)
+    print(f"✅ Midi ({midi_path}) -> Encoded")
     return Encoded(data, key_signature, time_signature, mid.ticks_per_beat)
 
 
 if __name__ == '__main__':
     # encoded = from_midi("data/unfin.midi")
-    # print("Midi -> Encoded")
     # to_midi(encoded, 'data/unfin_result.midi')
-    # print("Encoded -> Midi")
-
     encoded = from_midi("data/zeppelin.mid")
-    print("Midi -> Encoded")
     to_midi(encoded, 'data/zeppelin_result.midi')
-    print("Encoded -> Midi")
