@@ -1,0 +1,1 @@
+MAESTRO_PATH = 'path/to/maestro'
