@@ -2,6 +2,7 @@ import numpy as np
 from hmmlearn.hmm import GaussianHMM
 from midi import from_midi, to_midi, Encoded
 import pickle
+import cv2
 
 
 def fit_model(data, n_components):
@@ -54,15 +55,21 @@ def load_model(n_components):
 
 def main():
     n_components = 45
+    samples_threshold = 0.95
 
     encoded = from_midi('data/unfin.midi')
     input_data = encoded.data.T
+    input_data[input_data > 0] = 1
+    cv2.imwrite("data/hmm_input.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
-    # model = create_model(input_data, n_components)
-    model = load_model(n_components)
+    model = create_model(input_data, n_components)
+    # model = load_model(n_components)
 
     samples = model.sample(500)[0]
+    samples[samples < samples_threshold] = 0
+    samples = samples * 127
+    cv2.imwrite("data/hmm_samples.png", samples.T * 2)
 
     print(samples)
     samples_data = np.rint(samples.T).astype(int).clip(0, 127)
