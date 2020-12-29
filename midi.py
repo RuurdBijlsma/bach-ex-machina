@@ -4,7 +4,8 @@ import numpy as np
 import cv2
 
 Encoded = namedtuple('Encoded', 'data key_signature time_signature bpm')
-custom_ticks_per_second = 16
+custom_ticks_per_second = 8
+# Todo make ticks per second customizable by making midi a class
 
 
 def get_metadata_track(tempo, encoded):
@@ -119,7 +120,7 @@ def from_midi(midi_path, img_output='data/arr.png'):
 
 
 if __name__ == '__main__':
-    # encoded = from_midi("data/unfin.midi")
-    # to_midi(encoded, 'data/unfin_result.midi')
-    encoded = from_midi("data/zeppelin.mid")
-    to_midi(encoded, 'data/zeppelin_result.midi')
+    encoded = from_midi("data/unfin.midi")
+    to_midi(encoded, 'data/unfin_result.midi')
+    # encoded = from_midi("data/zeppelin.mid")
+    # to_midi(encoded, 'data/zeppelin_result.midi')
