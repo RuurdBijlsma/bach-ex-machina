@@ -3,6 +3,7 @@ from hmmlearn.hmm import GaussianHMM
 from midi import from_midi, to_midi, Encoded
 import pickle
 import cv2
+from os import path
 
 
 def fit_model(data, n_components):
@@ -39,42 +40,45 @@ def best_model(data):
     return hmm, scores
 
 
-def create_model(input_data, n_components):
+def create_model(input_data, n_components, input_name):
     hmm = fit_model(input_data, n_components)
-    with open(f"data/hmm_{n_components}.pkl", "wb") as file:
+    with open(f"data/hmm_{input_name}_{n_components}.pkl", "wb") as file:
         pickle.dump(hmm, file)
         print("Exported model to file!")
     return hmm
 
 
-def load_model(n_components):
-    with open(f"data/hmm_{n_components}.pkl", "rb") as file:
+def load_model(n_components, input_name):
+    with open(f"data/hmm_{input_name}_{n_components}.pkl", "rb") as file:
         print("Imported model from file!")
         return pickle.load(file)
 
 
 def main():
-    n_components = 45
-    samples_threshold = 0.95
+    input_file = path.abspath('data/sandstorm_result.midi')
+    input_name = path.splitext(path.basename(input_file))[0]
 
-    encoded = from_midi('data/unfin.midi')
+    n_components = 35
+    samples_threshold = 0.97
+
+    encoded = from_midi(input_file)
     input_data = encoded.data.T
     input_data[input_data > 0] = 1
-    cv2.imwrite("data/hmm_input.png", input_data.T * 255)
+    cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
-    model = create_model(input_data, n_components)
-    # model = load_model(n_components)
+    model = create_model(input_data, n_components, input_name)
+    # model = load_model(n_components, input_name)
 
     samples = model.sample(500)[0]
     samples[samples < samples_threshold] = 0
     samples = samples * 127
-    cv2.imwrite("data/hmm_samples.png", samples.T * 2)
+    cv2.imwrite(f"data/hmm_samples_{input_name}_{n_components}.png", samples.T * 2)
 
     print(samples)
     samples_data = np.rint(samples.T).astype(int).clip(0, 127)
     sample_encoded = Encoded(samples_data, encoded.key_signature, encoded.time_signature, encoded.bpm)
-    to_midi(sample_encoded, "data/predicted.midi")
+    to_midi(sample_encoded, f"data/predicted_{input_name}_{n_components}.midi")
 
 
 if __name__ == '__main__':
