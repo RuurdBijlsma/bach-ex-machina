@@ -1,1 +1,1 @@
-MAESTRO_PATH = 'path/to/maestro'
+MAESTRO_PATH = 'data/maestro'
