@@ -5,13 +5,17 @@ import cv2
 
 Encoded = namedtuple('Encoded', 'data key_signature time_signature bpm')
 custom_ticks_per_second = 8
+
+
 # Todo make ticks per second customizable by making midi a class
 
 
 def get_metadata_track(tempo, encoded):
     meta_track = MidiTrack()
-    meta_track.append(encoded.time_signature)
-    meta_track.append(encoded.key_signature)
+    if not (encoded.time_signature is None):
+        meta_track.append(encoded.time_signature)
+    if not (encoded.key_signature is None):
+        meta_track.append(encoded.key_signature)
     meta_track.append(MetaMessage('set_tempo', tempo=tempo, time=0))
     return meta_track
 
@@ -120,7 +124,7 @@ def from_midi(midi_path, img_output='data/arr.png'):
 
 
 if __name__ == '__main__':
-    encoded = from_midi("data/unfin.midi")
-    to_midi(encoded, 'data/unfin_result.midi')
-    # encoded = from_midi("data/zeppelin.mid")
-    # to_midi(encoded, 'data/zeppelin_result.midi')
+    # encoded = from_midi("data/unfin.midi")
+    # to_midi(encoded, 'data/unfin_result.midi')
+    encoded = from_midi("data/sandstorm.mid")
+    to_midi(encoded, 'data/sandstorm_result.midi')
