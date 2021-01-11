@@ -92,10 +92,27 @@ The time units (ticks) used in MIDI are based on the tempo, which can change thr
 \par
 By using this representation we merge all tracks present in the MIDI file into one format, therefore we support MIDI tracks with any number of tracks. 
 Once we've transformed a MIDI file to this format we can feed it into a number of machine learning models, such as a hidden Markov model or an LSTM. Such models will then output in the same format, so we have also built a way to convert back from the simplified format to a MIDI file, which can be played by a synthesizer (or a computer).
+    
+\subsection{Objectives}
+% Pranav
+
+
+\section{Methods}
+
+\subsection{Baseline Model}
+To help determine the success of our final LSTM model, we will compare it to a non-deep learning based model, namely a hidden Markov Model. We use a Gaussian hidden Markov model and train it on only the one input song, Bach's unfinished fugue. The velocities values of the simplified representation are not used in this model, as this lead to more chaotic results. By only feeding the model a 1 for a note pressed and a 0 for silence, we can threshold the output of the model and tune it to audibly produce better results.
 
 \ifpdf
 \else
 \textbf{Generated using our hidden Markov model}
+
+Original: Bach - The Art of Fugue (unfinished):
+
+startaudio midi/unfinpiano.wav endaudio
+
+Generated audio using a hidden Markov model, based on Bach - The Art of Fugue:
+
+startaudio midi/unfinpredicted.wav endaudio
 
 Original: Toto - Africa (piano version):
 
@@ -113,16 +130,7 @@ Generated audio using a hidden Markov model, based on Darude - Sandstorm:
 
 startaudio midi/standstormpredicted.wav endaudio
 \fi
-    
-\subsection{Objectives}
-% Pranav
 
-
-\section{Methods}
-
-\subsection{Baseline Model}
-To help determine the success of our final LSTM model, we will compare it to a non-deep learning based model, namely a hidden Markov Model. We use a Gaussian hidden Markov model and train it on only the one input song, Bach's unfinished fugue. The velocities values of the simplified representation are not used in this model, as this lead to more chaotic results. By only feeding the model a 1 for a note pressed and a 0 for silence, we can threshold the output of the model and tune it to audibly produce better results.
-% Hmm
 \subsection{LSTM}
 
 \lipsum[1-5]
