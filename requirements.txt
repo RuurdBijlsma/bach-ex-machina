@@ -1,6 +1,0 @@
-hmmlearn
-matplotlib
-numpy
-mido
-opencv-python
-pandas
