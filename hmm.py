@@ -4,7 +4,7 @@ from midi import MIDI, Encoded
 from prepare_data import process, get_notes_range, restore
 import pickle
 import cv2
-from os import path
+import os
 
 
 def fit_model(data, n_components):
@@ -55,12 +55,20 @@ def load_model(n_components, input_name):
         return pickle.load(file)
 
 
+def get_model(input_data, n_components, input_name, recreate_override=False):
+    if recreate_override or not os.path.isfile(f"data/hmm_{input_name}_{n_components}.pkl"):
+        print(f"Creating model (n_components={n_components}, input_name={input_name})")
+        return create_model(input_data, n_components, input_name)
+    print(f"Loading model (n_components={n_components}, input_name={input_name})")
+    return load_model(n_components, input_name)
+
+
 def main():
     m = MIDI()
-    input_file = path.abspath('data/unfin.midi')
-    input_name = path.splitext(path.basename(input_file))[0]
+    input_file = os.path.abspath('data/unfin.midi')
+    input_name = os.path.splitext(os.path.basename(input_file))[0]
 
-    n_components = 35
+    n_components = 65
     samples_threshold = 0.97
 
     encoded = m.from_midi(input_file)
@@ -72,8 +80,7 @@ def main():
     cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
-    # model = create_model(input_data, n_components, input_name)
-    model = load_model(n_components, input_name)
+    model = get_model(input_data, n_components, input_name, False)
 
     samples = model.sample(500)[0]
     samples[samples < samples_threshold] = 0
