@@ -1,6 +1,7 @@
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
-from midi import from_midi, to_midi, Encoded
+from midi import MIDI, Encoded
+from prepare_data import process, get_notes_range, restore
 import pickle
 import cv2
 from os import path
@@ -55,20 +56,24 @@ def load_model(n_components, input_name):
 
 
 def main():
-    input_file = path.abspath('data/sandstorm_result.midi')
+    m = MIDI()
+    input_file = path.abspath('data/unfin.midi')
     input_name = path.splitext(path.basename(input_file))[0]
 
     n_components = 35
     samples_threshold = 0.97
 
-    encoded = from_midi(input_file)
+    encoded = m.from_midi(input_file)
+    start, end = get_notes_range("bach")
+    encoded = process(encoded, start, end)
+
     input_data = encoded.data.T
     input_data[input_data > 0] = 1
     cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
-    model = create_model(input_data, n_components, input_name)
-    # model = load_model(n_components, input_name)
+    # model = create_model(input_data, n_components, input_name)
+    model = load_model(n_components, input_name)
 
     samples = model.sample(500)[0]
     samples[samples < samples_threshold] = 0
@@ -77,8 +82,8 @@ def main():
 
     print(samples)
     samples_data = np.rint(samples.T).astype(int).clip(0, 127)
-    sample_encoded = Encoded(samples_data, encoded.key_signature, encoded.time_signature, encoded.bpm)
-    to_midi(sample_encoded, f"data/predicted_{input_name}_{n_components}.midi")
+    sample_encoded = restore(Encoded(samples_data, *encoded[1:]), start, end)
+    m.to_midi(sample_encoded, f"data/predicted_{input_name}_{n_components}.midi")
 
 
 if __name__ == '__main__':

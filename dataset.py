@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Iterable
 import pandas as pd
 
 import settings
-from midi import from_midi
+from midi import MIDI
 
 CSV_FILE = 'maestro-v3.0.0.csv'
 
@@ -18,7 +18,7 @@ class Dataset:
         self.index = pd.read_csv(os.path.join(settings.MAESTRO_PATH, CSV_FILE))
 
         if composer is not None:
-            self.index = self.index[self.index['canonical_composer'].str.contains(composer)]
+            self.index = self.index[self.index['canonical_composer'].str.contains(composer, case=False)]
 
     def _iter_split(self, split: str) -> TSplit:
         dataset = self.index[self.index['split'] == split]
@@ -51,7 +51,7 @@ def main():
     # Load files
     _, paths = ds.train
 
-    for midi in map(from_midi, paths):
+    for midi in map(MIDI().from_midi, paths):
         print(midi)
 
 

@@ -1,1 +1,1 @@
-MAESTRO_PATH = 'data/maestro'
+MAESTRO_PATH = 'data/maestro-v3.0.0'
