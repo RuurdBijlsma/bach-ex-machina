@@ -7,6 +7,7 @@ from keras.layers import Dense, Dropout, LSTM
 from keras.optimizers import Adam, Adadelta
 import numpy as np
 from prepare_data import get_processed_data, to_input_output
+import tensorflow as tf
 
 
 def main():
@@ -49,10 +50,14 @@ def main():
                        optimizer=Adadelta(lr=0.001, decay=1e-6),
                        metrics=['accuracy'])
 
+    checkpoint_path = "data/model_checkpoint.ckpt"
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True, verbose=1)
+
     # Fitting the data to the model
     classifier.fit(train_x,
                    train_y,
-                   epochs=3,
+                   epochs=100,
+                   callbacks=[cp_callback],
                    validation_data=(val_x, val_y))
     print(classifier.summary())
 
