@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import cv2
 
-Encoded = namedtuple('Encoded', 'data key_signature time_signature bpm')
+Encoded = namedtuple('Encoded', 'data key_signature time_signature')
 
 
 class MIDI:
@@ -53,9 +53,10 @@ class MIDI:
 
     def to_midi(self, encoded, midi_path):
         tempo = 500000
-        tps = second2tick(1, encoded.bpm, tempo)
+        bpm = 120
+        tps = second2tick(1, bpm, tempo)
 
-        mid = MidiFile(type=1, ticks_per_beat=encoded.bpm)
+        mid = MidiFile(type=1, ticks_per_beat=bpm)
         mid.tracks.append(self.get_metadata_track(tempo, encoded))
         data = encoded.data.T.copy()
         n_tracks = (data != 0).sum(axis=1).max()
@@ -117,7 +118,7 @@ class MIDI:
 
         cv2.imwrite(img_output, data)
         print(f"✅ Midi ({midi_path}) -> Encoded")
-        return Encoded(data, key_signature, time_signature, mid.ticks_per_beat)
+        return Encoded(data, key_signature, time_signature)
 
 
 if __name__ == '__main__':

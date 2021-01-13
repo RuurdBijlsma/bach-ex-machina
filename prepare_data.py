@@ -55,16 +55,29 @@ def get_notes_range(composer):
     return start, end
 
 
-def process(encoded, start, end):
+def process(encoded, start, end, add_end_token=True):
     data = encoded.data[start:end, :]
+    if add_end_token:
+        data = np.concatenate((data, np.zeros((data.shape[0], 1))), axis=1)
+        bottom_row = np.zeros((1, data.shape[1]))
+        bottom_row[:, -1] = 1
+        data = np.concatenate((data, bottom_row), axis=0)
     return Encoded(data, *encoded[1:])
 
 
-def restore(encoded, start, end):
-    top = np.zeros((start, encoded.data.shape[1]), dtype=encoded.data.dtype)
-    bottom = np.zeros((128 - end, encoded.data.shape[1]), dtype=encoded.data.dtype)
-    data = np.concatenate((top, encoded.data, bottom), axis=0)
+def restore(encoded, start, end, remove_end_token=True):
+    data = encoded.data
+    if remove_end_token:
+        data = data[0:data.shape[0] - 1, 0:data.shape[1] - 1]
+    top = np.zeros((start, data.shape[1]), dtype=data.dtype)
+    bottom = np.zeros((128 - end, data.shape[1]), dtype=data.dtype)
+    data = np.concatenate((top, data, bottom), axis=0)
     return Encoded(data, *encoded[1:])
+
+
+def to_input_output(data):
+    pass  # merge all encoded datas here to mega 2d array of 128x50000000 and return that (x)
+    # and the same shifted one to the right for output (y)
 
 
 def get_processed_data(composer):
@@ -81,6 +94,7 @@ def get_processed_data(composer):
 def main():
     composer = "bach"
     (train, test, validation), (start, end) = get_processed_data(composer)
+    to_input_output(train.data)
 
     first_encoded = train[0]
     restored = restore(first_encoded, start, end)
