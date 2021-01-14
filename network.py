@@ -51,7 +51,8 @@ def main():
                        metrics=['accuracy'])
 
     checkpoint_path = "data/model_checkpoint.ckpt"
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True, verbose=1)
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
+                                                     save_weights_only=True, verbose=1)
 
     # Fitting the data to the model
     classifier.fit(train_x,
