@@ -1,19 +1,20 @@
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, LSTM
-from keras.optimizers import Adam, Adadelta
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, LSTM
+from tensorflow.keras.optimizers import Adadelta
 import numpy as np
 from prepare_data import get_processed_data, to_input_output
-import tensorflow as tf
 
 
 def main():
     # Importing the data
     composer = "bach"
-    (train, test, validation), (start, end) = get_processed_data(composer)
+    compress = 2
+    (train, test, validation), (start, end) = get_processed_data(composer, compress)
     n_notes = train.shape[1]
 
     train[train > 0] = 1

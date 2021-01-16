@@ -7,7 +7,6 @@ import numpy as np
 import functools
 import multiprocessing
 
-
 def dump_pickle(paths, output_file):
     song_data = [x.data.T for x in get_pool().map(MIDI().from_midi, paths)]
     pickle.dump(song_data, open(output_file, "wb"))
@@ -46,9 +45,12 @@ def get_train_test_val_lists(composer):
     return train, test, validation
 
 
-def get_notes_range(composer):
-    train, test, validation = get_train_test_val_lists(composer)
-    distribution = np.concatenate(train + test + validation, axis=0).sum(axis=0)
+def get_notes_range(composer=None, data=None):
+    if data is None:
+        train, test, validation = get_train_test_val_lists(composer)
+        data = train + test + validation
+        data = np.concatenate(data, axis=0)
+    distribution = data.sum(axis=0)
     # np.savetxt(f"data/{composer}_distribution.csv", distribution, delimiter=",")
     start = np.argmax(distribution > 0)
     end = distribution.size - np.argmax(distribution[::-1] > 0) - 1
@@ -56,22 +58,52 @@ def get_notes_range(composer):
     return start, end
 
 
-def process(data, start, end, add_end_token=True):
+def downscale_midi_array(data, factor):
+    result = np.zeros((data.shape[0], data.shape[1] // factor), dtype=np.float64)
+
+    for row_i in range(result.shape[1]):
+        for j in range(factor):
+            if j >= data.shape[1]:
+                break
+            result[:, row_i] += data[:, row_i * factor + j]
+
+    result = result.clip(max=127).astype(np.int8)
+    return result
+
+
+def upscale_midi_array(data, factor):
+    result = np.zeros((data.shape[0], data.shape[1] * factor), dtype=data.dtype)
+
+    for row_i in range(data.shape[1]):
+        result[:, row_i * factor] = data[:, row_i]
+
+    return result
+
+
+def process(data, start, end, compress=1, add_end_token=True):
+    if compress != 1:
+        data = downscale_midi_array(data, compress)
+        start = start // compress
+        end = end // compress
     data = data[:, start:end]
     if add_end_token:
-        extra = np.zeros((1, data.shape[1]))
+        extra = np.zeros((1, data.shape[1]), dtype=data.dtype)
         data = np.concatenate((data, extra), axis=0)
-        extra_row = np.zeros((data.shape[0], 1))
+        extra_row = np.zeros((data.shape[0], 1), dtype=data.dtype)
         extra_row[-1, 0] = 1
         data = np.concatenate((data, extra_row), axis=1)
     return data
 
 
-def restore(data, start, end, remove_end_token=True):
+def restore(data, start, end, decompress=1, remove_end_token=True):
+    if decompress != 1:
+        data = upscale_midi_array(data, decompress)
+        start = start // decompress * 2
+        end = start + (data.shape[1] - (1 if remove_end_token else 0))
     if remove_end_token:
         data = data[0:data.shape[0] - 1, 0:data.shape[1] - 1]
-    top = np.zeros((start, data.shape[1]), dtype=data.dtype)
-    bottom = np.zeros((128 - end, data.shape[1]), dtype=data.dtype)
+    top = np.zeros((data.shape[0], start), dtype=data.dtype)
+    bottom = np.zeros((data.shape[0], 128 - end), dtype=data.dtype)
     data = np.concatenate((top, data, bottom), axis=1)
     return data
 
@@ -86,23 +118,41 @@ def to_input_output(data):
     return x, y
 
 
-def get_processed_data(composer):
+def get_processed_data(composer, compress=1):
     train, test, validation = get_train_test_val_lists(composer)
     start, end = get_notes_range(composer)
 
-    train = np.concatenate([process(data, start, end) for data in train], axis=0)
-    test = np.concatenate([process(data, start, end) for data in test], axis=0)
-    validation = np.concatenate([process(data, start, end) for data in validation], axis=0)
+    train = np.concatenate([process(data, start, end, compress) for data in train], axis=0)
+    test = np.concatenate([process(data, start, end, compress) for data in test], axis=0)
+    validation = np.concatenate([process(data, start, end, compress) for data in validation], axis=0)
 
     return (train, test, validation), (start, end)
 
 
-def main():
+def test_process_restore():
+    m = MIDI()
+    compress = 2
+    input_midi_name = 'unfin'
+    encoded = m.from_midi(f'data/{input_midi_name}.midi')
+    data = encoded.data.T
+    start, end = get_notes_range(data=data)
+    data = process(data, start, end, compress)
+
+    restored_data = restore(data, start, end, compress)
+    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/compress_test_{input_midi_name}.midi")
+
+
+def test_train_data():
     composer = "bach"
-    (train, test, validation), (start, end) = get_processed_data(composer)
+    compress = 2
+    (train, test, validation), (start, end) = get_processed_data(composer, compress)
     (train_x, train_y) = to_input_output(train)
     (test_x, test_y) = to_input_output(test)
     (val_x, val_y) = to_input_output(validation)
+
+
+def main():
+    test_process_restore()
 
 
 @functools.lru_cache

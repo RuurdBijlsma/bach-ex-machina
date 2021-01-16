@@ -7,7 +7,7 @@ Encoded = namedtuple('Encoded', 'data key_signature time_signature')
 
 
 class MIDI:
-    def __init__(self, custom_ticks_per_second=8):
+    def __init__(self, custom_ticks_per_second=12):
         self.custom_ticks_per_second = custom_ticks_per_second
 
     @staticmethod
@@ -46,8 +46,8 @@ class MIDI:
                 # Note start or note velocity change within this hold
                 time = self.to_relative_ticks(tps, start_t + t, prev_t)
                 prev_t = start_t + t
-                start_velocity = velocity
-                messages.append(Message('note_on', note=note, velocity=velocity, time=time))
+                start_velocity = int(velocity)
+                messages.append(Message('note_on', note=note, velocity=int(velocity), time=time))
 
         return messages, end_t
 

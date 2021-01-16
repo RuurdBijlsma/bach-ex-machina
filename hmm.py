@@ -64,18 +64,19 @@ def get_model(input_data, n_components, input_name, recreate_override=False):
 
 
 def main():
-    m = MIDI()
-    input_file = os.path.abspath('data/unfin.midi')
-    input_name = os.path.splitext(os.path.basename(input_file))[0]
+    m = MIDI(8)
+    compress = 1
+    input_file = os.path.abspath('data/africa_result.midi')
+    input_name = os.path.splitext(os.path.basename(input_file))[0] + "_c" + str(compress)
 
-    n_components = 65
+    n_components = 55
     samples_threshold = 0.97
 
     encoded = m.from_midi(input_file)
-    start, end = get_notes_range("bach")
-    encoded = process(encoded, start, end)
+    data = encoded.data.T
+    start, end = get_notes_range(data=data)
+    input_data = process(data, start, end, compress, add_end_token=False)
 
-    input_data = encoded.data.T
     input_data[input_data > 0] = 1
     cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
@@ -84,13 +85,13 @@ def main():
 
     samples = model.sample(500)[0]
     samples[samples < samples_threshold] = 0
-    samples = samples * 127
+    samples[samples > 0] = 100
     cv2.imwrite(f"data/hmm_samples_{input_name}_{n_components}.png", samples.T * 2)
 
     print(samples)
-    samples_data = np.rint(samples.T).astype(int).clip(0, 127)
-    sample_encoded = restore(Encoded(samples_data, *encoded[1:]), start, end)
-    m.to_midi(sample_encoded, f"data/predicted_{input_name}_{n_components}.midi")
+    samples_data = samples.clip(0, 127).astype(np.int8)
+    restored_data = restore(samples_data, start, end, compress, remove_end_token=False)
+    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/predicted_{input_name}_{n_components}.midi")
 
 
 if __name__ == '__main__':
