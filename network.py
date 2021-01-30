@@ -6,7 +6,6 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, LSTM
 from tensorflow.keras.optimizers import Adadelta
-import numpy as np
 from prepare_data import get_processed_data, to_input_output
 
 
@@ -19,6 +18,11 @@ def main():
 
     train[train > 0] = 1
     test[test > 0] = 1
+
+    from tensorflow.python.client import device_lib
+    print(device_lib.list_local_devices())
+    tf.debugging.set_log_device_placement(True)
+
     validation[validation > 0] = 1
 
     (train_x, train_y) = to_input_output(train)
