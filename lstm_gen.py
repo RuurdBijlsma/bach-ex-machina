@@ -33,8 +33,9 @@ def main():
 
     samples_threshold = 0.5
     samples = classifier(input_data).numpy()
-    samples[samples < samples_threshold] = 0
-    samples[samples > 0] = 100
+    # samples[samples < samples_threshold] = 0
+    # samples[samples > 0] = 100
+    samples *= 255
     output_name = f"{input_name}_{compress}_{n_notes}_{composer}"
     cv2.imwrite(f"data/lstm_samples_{output_name}.png", samples.T * 2)
 
