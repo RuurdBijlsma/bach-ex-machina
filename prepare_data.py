@@ -7,6 +7,7 @@ import numpy as np
 import functools
 import multiprocessing
 
+
 def dump_pickle(paths, output_file):
     song_data = [x.data.T for x in get_pool().map(MIDI().from_midi, paths)]
     pickle.dump(song_data, open(output_file, "wb"))
@@ -86,12 +87,15 @@ def process(data, start, end, compress=1, add_end_token=True):
         start = start // compress
         end = end // compress
     data = data[:, start:end]
+
     if add_end_token:
         extra = np.zeros((1, data.shape[1]), dtype=data.dtype)
         data = np.concatenate((data, extra), axis=0)
-        extra_row = np.zeros((data.shape[0], 1), dtype=data.dtype)
+    extra_row = np.zeros((data.shape[0], 1), dtype=data.dtype)
+    if add_end_token:
         extra_row[-1, 0] = 1
-        data = np.concatenate((data, extra_row), axis=1)
+    data = np.concatenate((data, extra_row), axis=1)
+
     return data
 
 
@@ -102,6 +106,8 @@ def restore(data, start, end, decompress=1, remove_end_token=True):
         end = start + (data.shape[1] - (1 if remove_end_token else 0))
     if remove_end_token:
         data = data[0:data.shape[0] - 1, 0:data.shape[1] - 1]
+    else:
+        data = data[:, 0:data.shape[1] - 1]
     top = np.zeros((data.shape[0], start), dtype=data.dtype)
     bottom = np.zeros((data.shape[0], 128 - end), dtype=data.dtype)
     data = np.concatenate((top, data, bottom), axis=1)

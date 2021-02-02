@@ -31,13 +31,19 @@ class MIDI:
         messages = []
 
         row_from_t = data[start_t:, note]
+        notes_total = len(row_from_t)
         # This `t` starts at 0, so not an absolute value for t
         for t, velocity in enumerate(row_from_t):
             # If it's been processed remove from array
             row_from_t[t] = 0
-            if velocity == start_velocity:
+            if t == notes_total - 1:
+                end_t = start_t + t
+                time = self.to_relative_ticks(tps, start_t + t, prev_t)
+                messages.append(Message('note_off', note=note, velocity=0, time=time))
+                break
+            elif velocity == start_velocity:
                 continue
-            elif velocity == 0:
+            elif velocity == 0 or t == notes_total - 1:
                 end_t = start_t + t
                 time = self.to_relative_ticks(tps, start_t + t, prev_t)
                 messages.append(Message('note_off', note=note, velocity=0, time=time))
