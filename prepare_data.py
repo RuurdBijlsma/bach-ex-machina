@@ -1,11 +1,15 @@
-from dataset import Dataset
-import settings
-from midi import MIDI, Encoded
-import os
-import pickle
-import numpy as np
 import functools
 import multiprocessing
+import os
+import pickle
+
+import numpy as np
+import tensorflow as tf
+
+import settings
+from dataset import Dataset
+from midi import MIDI, Encoded
+
 
 
 def dump_pickle(paths, output_file):
@@ -122,6 +126,17 @@ def to_input_output(data):
     y = np.reshape(y, (y.shape[0], y.shape[1]))
 
     return x, y
+
+
+def create_dataset(x, y, window_size):
+    batch_size = 32
+    return (tf.data.Dataset
+            .from_tensor_slices((x, y))
+            .window(window_size, 1, 1, False)
+            .shuffle(1_000)
+            .batch(batch_size)
+            .prefetch(1)
+            )
 
 
 def get_processed_data(composer, compress=1):
