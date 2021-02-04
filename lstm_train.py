@@ -6,7 +6,8 @@ from prepare_data import get_processed_data, ts_generator
 
 def main():
     # Importing the data
-    composer = "bach"
+    # composer = "bach"
+    composer = None
     compress = 1
 
     (train, test, validation), _ = get_processed_data(composer, compress)
@@ -17,8 +18,8 @@ def main():
     validation[validation > 0] = 1
 
     window_size = 30
-    test = ts_generator(test, window_size)
     train = ts_generator(train, window_size)
+    test = ts_generator(test, window_size)
     validation = ts_generator(validation, window_size)
 
     # Initializing the classifier Network

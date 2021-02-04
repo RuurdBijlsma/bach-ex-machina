@@ -10,8 +10,9 @@ from prepare_data import process, restore, get_notes_range
 
 
 def main():
-    m = MIDI(8)
-    composer = 'bach'
+    m = MIDI(4)
+    # composer = 'bach'
+    composer = None
     compress = 1
     window_size = 30
 
@@ -28,6 +29,7 @@ def main():
     checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}"
 
     classifier = tf.keras.models.load_model(checkpoint_path)
+    print(f'Loaded {checkpoint_path} model')
 
     output_size = input_data.shape[0] - window_size
 
@@ -42,7 +44,16 @@ def main():
     samples = classifier.predict(input_windows)
     print(f'Generated {samples.shape[0]} ticks in {(time.perf_counter() - start):.2f}s')
 
-    samples *= 255
+    # Machine Learning™
+    # The model isn't very good at outputting zero, so we remove everything below this arbitrary threshold
+    threshold = .055
+    samples[samples < threshold] = 0
+
+    sample_max = np.max(samples)
+    scale = 100 / (sample_max or 1)
+    print(f'Scaling values by {scale:.1f}')
+    samples *= scale
+
     output_name = f"{input_name}_{compress}_{n_notes}_{composer}"
     cv2.imwrite(f"data/lstm_samples_{output_name}.png", samples.T * 2)
 
