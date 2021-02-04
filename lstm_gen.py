@@ -44,7 +44,6 @@ def main():
     output_name = f"{input_name}_{compress}_{n_notes}_{composer}"
     cv2.imwrite(f"data/lstm_samples_{output_name}.png", samples.T * 2)
 
-    print(samples)
     samples_data = samples.clip(0, 127).astype(np.int8)
     restored_data = restore(samples_data, start, end, compress, remove_end_token=False)
     m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/lstm_predicted_{output_name}.midi")
