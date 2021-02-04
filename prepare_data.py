@@ -155,7 +155,7 @@ def get_processed_data(composer, compress=1, dtype=np.float):
 
 
 def ts_generator(dataset, window_size: int) -> TimeseriesGenerator:
-    return TimeseriesGenerator(dataset, dataset, window_size)
+    return TimeseriesGenerator(dataset, dataset, window_size, shuffle=True)
 
 
 def test_process_restore():
