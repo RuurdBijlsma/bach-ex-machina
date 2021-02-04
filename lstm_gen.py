@@ -1,4 +1,5 @@
 import os
+import time
 
 import cv2
 import numpy as np
@@ -19,8 +20,8 @@ def main():
 
     encoded = m.from_midi(input_file)
     data = encoded.data.T
-    start, end = get_notes_range(composer)
-    input_data = process(data, start, end, compress, add_end_token=False)
+    note_range = get_notes_range(composer)
+    input_data = process(data, *note_range, compress, add_end_token=False)
     input_data[input_data > 0] = 1
     n_notes = input_data.shape[1]
 
@@ -37,15 +38,16 @@ def main():
         in range(output_size)
     ])
 
-    batch_size = 32
-    samples = classifier.predict(input_windows, batch_size=batch_size)
+    start = time.perf_counter()
+    samples = classifier.predict(input_windows)
+    print(f'Generated {samples.shape[0]} ticks in {(time.perf_counter() - start):.2f}s')
 
     samples *= 255
     output_name = f"{input_name}_{compress}_{n_notes}_{composer}"
     cv2.imwrite(f"data/lstm_samples_{output_name}.png", samples.T * 2)
 
     samples_data = samples.clip(0, 127).astype(np.int8)
-    restored_data = restore(samples_data, start, end, compress, remove_end_token=False)
+    restored_data = restore(samples_data, *note_range, compress, remove_end_token=False)
     m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/lstm_predicted_{output_name}.midi")
 
 

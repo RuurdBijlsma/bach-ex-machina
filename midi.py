@@ -96,7 +96,7 @@ class MIDI:
             mid.tracks.append(track)
 
         mid.save(midi_path)
-        print(f"✅ Encoded -> Midi ({midi_path})")
+        print(f"✅ Saved Encoded -> Midi ({midi_path})")
 
     def from_midi(self, midi_path, img_output='data/arr.png'):
         Note = namedtuple('Note', 'value time velocity')
@@ -123,7 +123,7 @@ class MIDI:
             data[note.value, note.time:] = note.velocity
 
         cv2.imwrite(img_output, data)
-        print(f"✅ Midi ({midi_path}) -> Encoded")
+        print(f"✅ Loaded Midi ({midi_path}) -> Encoded")
         return Encoded(data, key_signature, time_signature)
 
 
