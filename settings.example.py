@@ -1,2 +1,2 @@
-MAESTRO_PATH = 'data/maestro-v3.0.0'
+maestro_path = 'data/maestro-v3.0.0'
 ticks_per_second = 8

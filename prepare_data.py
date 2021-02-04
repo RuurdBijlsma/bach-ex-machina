@@ -25,9 +25,9 @@ def dump_all_midi_data(composer, overwrite=False):
     :param composer: Composer of the midi files to pass to Dataset
     """
     d = Dataset(composer)
-    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
-    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
-    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
+    train_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
+    test_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
+    validation_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
     if overwrite or not os.path.isfile(train_pickle):
         dump_pickle(d.train[1], train_pickle)
     if overwrite or not os.path.isfile(test_pickle):
@@ -39,9 +39,9 @@ def dump_all_midi_data(composer, overwrite=False):
 def get_train_test_val_lists(composer):
     dump_all_midi_data(composer)
 
-    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
-    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
-    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
+    train_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
+    test_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
+    validation_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
 
     train = pickle.load(open(train_pickle, 'rb'))
     test = pickle.load(open(test_pickle, 'rb'))
