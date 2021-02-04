@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Dense, Dropout, LSTM, BatchNormalization, Conv1D
+from tensorflow.keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adadelta
 
@@ -20,9 +20,11 @@ def get_model(n_notes, window_size):
         Dense(n_notes, activation='sigmoid'),
     ])
 
+    name = '1conv'
+
     # Compiling the network
     classifier.compile(loss='mse',
                        optimizer=Adadelta(lr=0.001, decay=1e-6),
                        metrics=['accuracy'])
 
-    return classifier
+    return classifier, name
