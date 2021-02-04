@@ -5,11 +5,11 @@ import pickle
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
 import settings
 from dataset import Dataset
 from midi import MIDI, Encoded
-
 
 
 def dump_pickle(paths, output_file):
@@ -139,7 +139,7 @@ def create_dataset(x, y, window_size):
             )
 
 
-def get_processed_data(composer, compress=1):
+def get_processed_data(composer, compress=1, dtype=np.float):
     train, test, validation = get_train_test_val_lists(composer)
     start, end = get_notes_range(composer)
 
@@ -147,7 +147,15 @@ def get_processed_data(composer, compress=1):
     test = np.concatenate([process(data, start, end, compress) for data in test], axis=0)
     validation = np.concatenate([process(data, start, end, compress) for data in validation], axis=0)
 
+    train = train.astype(dtype)
+    test = test.astype(dtype)
+    validation = validation.astype(dtype)
+
     return (train, test, validation), (start, end)
+
+
+def ts_generator(dataset, window_size: int) -> TimeseriesGenerator:
+    return TimeseriesGenerator(dataset, dataset, window_size)
 
 
 def test_process_restore():

@@ -1,16 +1,19 @@
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-from lstm_model import get_model
-from prepare_data import process, restore, get_processed_data
-from midi import MIDI, Encoded
 import cv2
 import numpy as np
+import tensorflow as tf
+
+from lstm_model import get_model
+from midi import MIDI, Encoded
+from prepare_data import process, restore, get_notes_range
 
 
 def main():
-    m = MIDI(8)
+    # devices = tf.config.experimental.list_physical_devices(device_type='CPU')
+    # tf.config.experimental.set_visible_devices(devices=devices, device_type='CPU')
+
+    m = MIDI(4)
     composer = 'bach'
     compress = 1
     window_size = 30
@@ -20,7 +23,7 @@ def main():
 
     encoded = m.from_midi(input_file)
     data = encoded.data.T
-    _, (start, end) = get_processed_data(composer, compress)
+    start, end = get_notes_range(composer)
     input_data = process(data, start, end, compress, add_end_token=False)
     input_data[input_data > 0] = 1
     n_notes = input_data.shape[1]
@@ -32,22 +35,18 @@ def main():
     classifier = get_model(n_notes, window_size)
     classifier.load_weights(checkpoint_path)
 
-    # from tensorflow.python.client import device_lib
-    # print(device_lib.list_local_devices())
-    # tf.debugging.set_log_device_placement(True)
-
-    samples_threshold = 0.5
-    # inp = tf.keras.preprocessing.sequence.TimeseriesGenerator(input_data.T, input_data.T, window_size)
     output_size = input_data.shape[0] - window_size
-    samples = np.empty((output_size, n_notes))
-    for i in range(output_size):
-        print(f'{i}/{output_size}')
-        chunk = input_data[i:i + window_size, :]
-        samples[i] = classifier(np.expand_dims(chunk, 0))
 
-    # samples = None
-    # samples[samples < samples_threshold] = 0
-    # samples[samples > 0] = 100
+    # Shape the input
+    input_windows = np.array([
+        input_data[i:i + window_size, :].astype(np.float32)
+        for i
+        in range(output_size)
+    ])
+
+    batch_size = 32
+    samples = classifier.predict(input_windows, batch_size=batch_size)
+
     samples *= 255
     output_name = f"{input_name}_{compress}_{n_notes}_{composer}"
     cv2.imwrite(f"data/lstm_samples_{output_name}.png", samples.T * 2)
