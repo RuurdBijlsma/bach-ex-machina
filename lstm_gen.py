@@ -46,10 +46,11 @@ def main():
 
     # Machine Learning™
     # The model isn't very good at outputting zero, so we remove everything below this arbitrary threshold
-    threshold = .055
+    sample_max = np.max(samples)
+    threshold_scale = .8
+    threshold = sample_max * threshold_scale
     samples[samples < threshold] = 0
 
-    sample_max = np.max(samples)
     scale = 100 / (sample_max or 1)
     print(f'Scaling values by {scale:.1f}')
     samples *= scale
