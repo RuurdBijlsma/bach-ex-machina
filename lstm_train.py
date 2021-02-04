@@ -2,17 +2,18 @@ import os
 
 import tensorflow as tf
 
+import settings
 from lstm_model import get_model
 from prepare_data import get_processed_data, ts_generator
 
 
 def main():
     # Importing the data
-    composer = "bach"
-    # composer = None
-    compress = 1
+    # composer = "bach"
+    composer = None
+    tf.debugging.set_log_device_placement(True)
 
-    (train, test, validation), _ = get_processed_data(composer, compress)
+    (train, test, validation), _ = get_processed_data(composer)
     n_notes = train.shape[1]
 
     train[train > 0] = 1
@@ -27,7 +28,7 @@ def main():
     # Initializing the classifier Network
     classifier, model_name = get_model(n_notes, window_size)
 
-    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}"
+    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_tps{settings.ticks_per_second}"
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
                                                      save_weights_only=False, verbose=1)
 

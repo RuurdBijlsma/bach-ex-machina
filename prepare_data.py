@@ -13,7 +13,7 @@ from midi import MIDI, Encoded
 
 
 def dump_pickle(paths, output_file):
-    song_data = [x.data.T for x in get_pool().map(MIDI().from_midi, paths)]
+    song_data = [x.data.T for x in get_pool().map(MIDI(settings.ticks_per_second).from_midi, paths)]
     pickle.dump(song_data, open(output_file, "wb"))
     print(f"Dumped '{output_file}' pickle")
 
@@ -25,9 +25,9 @@ def dump_all_midi_data(composer, overwrite=False):
     :param composer: Composer of the midi files to pass to Dataset
     """
     d = Dataset(composer)
-    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_train.pkl")
-    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_test.pkl")
-    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_validation.pkl")
+    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
+    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
+    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
     if overwrite or not os.path.isfile(train_pickle):
         dump_pickle(d.train[1], train_pickle)
     if overwrite or not os.path.isfile(test_pickle):
@@ -39,9 +39,9 @@ def dump_all_midi_data(composer, overwrite=False):
 def get_train_test_val_lists(composer):
     dump_all_midi_data(composer)
 
-    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_train.pkl")
-    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_test.pkl")
-    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_validation.pkl")
+    train_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
+    test_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
+    validation_pickle = os.path.join(settings.MAESTRO_PATH, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
 
     train = pickle.load(open(train_pickle, 'rb'))
     test = pickle.load(open(test_pickle, 'rb'))
@@ -85,11 +85,7 @@ def upscale_midi_array(data, factor):
     return result
 
 
-def process(data, start, end, compress=1, add_end_token=True):
-    if compress != 1:
-        data = downscale_midi_array(data, compress)
-        start = start // compress
-        end = end // compress
+def process(data, start, end, add_end_token=True):
     data = data[:, start:end]
 
     if add_end_token:
@@ -103,11 +99,7 @@ def process(data, start, end, compress=1, add_end_token=True):
     return data
 
 
-def restore(data, start, end, decompress=1, remove_end_token=True):
-    if decompress != 1:
-        data = upscale_midi_array(data, decompress)
-        start = start // decompress * 2
-        end = start + (data.shape[1] - (1 if remove_end_token else 0))
+def restore(data, start, end, remove_end_token=True):
     if remove_end_token:
         data = data[0:data.shape[0] - 1, 0:data.shape[1] - 1]
     else:
@@ -139,13 +131,13 @@ def create_dataset(x, y, window_size):
             )
 
 
-def get_processed_data(composer, compress=1, dtype=np.float):
+def get_processed_data(composer, dtype=np.float):
     train, test, validation = get_train_test_val_lists(composer)
     start, end = get_notes_range(composer)
 
-    train = np.concatenate([process(data, start, end, compress) for data in train], axis=0)
-    test = np.concatenate([process(data, start, end, compress) for data in test], axis=0)
-    validation = np.concatenate([process(data, start, end, compress) for data in validation], axis=0)
+    train = np.concatenate([process(data, start, end) for data in train], axis=0)
+    test = np.concatenate([process(data, start, end) for data in test], axis=0)
+    validation = np.concatenate([process(data, start, end) for data in validation], axis=0)
 
     train = train.astype(dtype)
     test = test.astype(dtype)
@@ -160,21 +152,19 @@ def ts_generator(dataset, window_size: int) -> TimeseriesGenerator:
 
 def test_process_restore():
     m = MIDI()
-    compress = 2
     input_midi_name = 'unfin'
     encoded = m.from_midi(f'data/{input_midi_name}.midi')
     data = encoded.data.T
     start, end = get_notes_range(data=data)
-    data = process(data, start, end, compress)
+    data = process(data, start, end)
 
-    restored_data = restore(data, start, end, compress)
-    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/compress_test_{input_midi_name}.midi")
+    restored_data = restore(data, start, end)
+    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/test_{input_midi_name}.midi")
 
 
 def test_train_data():
     composer = "bach"
-    compress = 2
-    (train, test, validation), (start, end) = get_processed_data(composer, compress)
+    (train, test, validation), (start, end) = get_processed_data(composer)
     (train_x, train_y) = to_input_output(train)
     (test_x, test_y) = to_input_output(test)
     (val_x, val_y) = to_input_output(validation)

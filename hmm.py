@@ -1,5 +1,6 @@
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
+import settings
 from midi import MIDI, Encoded
 from prepare_data import process, get_notes_range, restore
 import pickle
@@ -64,10 +65,9 @@ def get_model(input_data, n_components, input_name, recreate_override=False):
 
 
 def main():
-    m = MIDI(8)
-    compress = 1
+    m = MIDI(settings.ticks_per_second)
     input_file = os.path.abspath('data/africa_result.midi')
-    input_name = os.path.splitext(os.path.basename(input_file))[0] + "_c" + str(compress)
+    input_name = os.path.splitext(os.path.basename(input_file))[0]
 
     n_components = 55
     samples_threshold = 0.97
@@ -75,7 +75,7 @@ def main():
     encoded = m.from_midi(input_file)
     data = encoded.data.T
     start, end = get_notes_range(data=data)
-    input_data = process(data, start, end, compress, add_end_token=False)
+    input_data = process(data, start, end, add_end_token=False)
 
     input_data[input_data > 0] = 1
     cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
@@ -90,7 +90,7 @@ def main():
 
     print(samples)
     samples_data = samples.clip(0, 127).astype(np.int8)
-    restored_data = restore(samples_data, start, end, compress, remove_end_token=False)
+    restored_data = restore(samples_data, start, end, remove_end_token=False)
     m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/predicted_{input_name}_{n_components}.midi")
 
 
