@@ -11,7 +11,6 @@ def main():
 
     (train, test, validation), _ = get_processed_data(composer, compress)
     n_notes = train.shape[1]
-    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}.ckpt"
 
     train[train > 0] = 1
     test[test > 0] = 1
@@ -25,8 +24,9 @@ def main():
     # Initializing the classifier Network
     classifier = get_model(n_notes, window_size)
 
+    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}"
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
-                                                     save_weights_only=True, verbose=1)
+                                                     save_weights_only=False, verbose=1)
 
     # Fitting the data to the model
     classifier.fit(train,

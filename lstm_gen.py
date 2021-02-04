@@ -4,16 +4,12 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from lstm_model import get_model
 from midi import MIDI, Encoded
 from prepare_data import process, restore, get_notes_range
 
 
 def main():
-    # devices = tf.config.experimental.list_physical_devices(device_type='CPU')
-    # tf.config.experimental.set_visible_devices(devices=devices, device_type='CPU')
-
-    m = MIDI(4)
+    m = MIDI(8)
     composer = 'bach'
     compress = 1
     window_size = 30
@@ -28,12 +24,9 @@ def main():
     input_data[input_data > 0] = 1
     n_notes = input_data.shape[1]
 
-    print(input_data.shape)
+    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}"
 
-    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_c{compress}.ckpt"
-
-    classifier = get_model(n_notes, window_size)
-    classifier.load_weights(checkpoint_path)
+    classifier = tf.keras.models.load_model(checkpoint_path)
 
     output_size = input_data.shape[0] - window_size
 
