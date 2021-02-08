@@ -1,6 +1,7 @@
 from tensorflow.keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adadelta
+from tensorflow.keras.optimizers import SGD
 
 
 def get_model(n_notes, window_size):
@@ -23,8 +24,8 @@ def get_model(n_notes, window_size):
     name = '1conv'
 
     # Compiling the network
-    classifier.compile(loss='mse',
-                       optimizer=Adadelta(lr=0.001, decay=1e-6),
+    classifier.compile(loss='categorical_crossentropy',
+                       optimizer=SGD(learning_rate=0.01, momentum=0.0, nesterov=False),
                        metrics=['accuracy'])
 
     return classifier, name
