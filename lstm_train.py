@@ -9,26 +9,23 @@ from prepare_data import get_processed_data, ts_generator
 
 def main():
     # Importing the data
-    # composer = "bach"
-    composer = None
     tf.debugging.set_log_device_placement(True)
 
-    (train, test, validation), _ = get_processed_data(composer)
+    (train, test, validation), _ = get_processed_data(settings.composer)
     n_notes = train.shape[1]
 
     train[train > 0] = 1
     test[test > 0] = 1
     validation[validation > 0] = 1
 
-    window_size = 30
-    train = ts_generator(train, window_size)
-    test = ts_generator(test, window_size)
-    validation = ts_generator(validation, window_size)
+    train = ts_generator(train, settings.window_size)
+    test = ts_generator(test, settings.window_size)
+    validation = ts_generator(validation, settings.window_size)
 
     # Initializing the classifier Network
-    classifier, model_name = get_model(n_notes, window_size)
+    classifier, model_name = get_model(n_notes, settings.window_size)
 
-    checkpoint_path = f"data/{composer}_checkpoint_n{n_notes}_tps{settings.ticks_per_second}"
+    checkpoint_path = f"data/{settings.composer}_checkpoint_n{n_notes}_tps{settings.ticks_per_second}"
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
                                                      save_weights_only=False, verbose=1)
 
@@ -51,7 +48,7 @@ def main():
     if not os.path.isfile(log):
         txt.append('name,composer,loss,accuracy')
 
-    txt.append(f'{model_name},{composer},{test_loss},{test_acc}')
+    txt.append(f'{model_name},{settings.composer},{test_loss},{test_acc}')
 
     with open(log, 'a') as f:
         f.writelines('\n'.join(txt) + '\n')

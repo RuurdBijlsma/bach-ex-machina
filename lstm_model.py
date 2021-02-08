@@ -1,6 +1,5 @@
 from tensorflow.keras.layers import Dense, Dropout, LSTM, Conv1D, BatchNormalization
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adadelta
 from tensorflow.keras.optimizers import SGD
 
 
