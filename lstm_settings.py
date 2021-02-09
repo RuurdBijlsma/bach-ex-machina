@@ -19,7 +19,7 @@ def get_model_id(settings, n_notes):
 settings = TrainSettings(
     ticks_per_second=8,
     window_size=96,
-    threshold_scale=.75,
+    threshold_scale=.7,
 
     # composer=None,
     composer='bach',
@@ -27,13 +27,13 @@ settings = TrainSettings(
     # network='medium',
     network='big',
 
-    # loss='categorical_crossentropy',
-    loss='binary_crossentropy',
+    loss='categorical_crossentropy',
+    # loss='binary_crossentropy',
     # loss='mse',
 
     # optimizer = SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
     optimizer=Nadam(learning_rate=0.005),
 
-    # final_activation = 'softmax',
+    # final_activation='softmax',
     final_activation='sigmoid',
 )

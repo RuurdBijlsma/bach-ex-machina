@@ -43,6 +43,7 @@ def generate(settings):
     start = time.perf_counter()
     samples = classifier.predict(input_windows)
     print(f'Generated {samples.shape[0]} ticks in {(time.perf_counter() - start):.2f}s')
+    cv2.imwrite(f"output/raw_{input_name}_{get_model_id(settings, n_notes)}.png", samples.T * 255)
 
     # Machine Learning™
     # The model isn't very good at outputting zero, so we remove everything below this arbitrary threshold
@@ -56,7 +57,7 @@ def generate(settings):
     samples[samples > 0] = scale
     samples_data = samples.clip(0, 127).astype(np.int8)
 
-    cv2.imwrite(f"output/{input_name}_{get_model_id(settings, n_notes)}.png", samples.T)
+    cv2.imwrite(f"output/samples_{input_name}_{get_model_id(settings, n_notes)}.png", samples.T)
 
     restored_data = restore(samples_data, *note_range, remove_end_token=False)
     m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"output/{input_name}_{get_model_id(settings, n_notes)}.midi")

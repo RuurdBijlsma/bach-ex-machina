@@ -35,14 +35,17 @@ def main():
     generate(settings)
 
 
-def lstm_train(settings, train, validation):
+def lstm_train(settings, train, validation, restore=False):
     n_notes = train.data.shape[1]
     print(f"Training model: {get_model_id(settings, n_notes)}")
+    checkpoint_path = f"output/{get_model_id(settings, n_notes)}"
 
     # Initializing the classifier Network
-    classifier = get_model(settings, n_notes)
-
-    checkpoint_path = f"output/{get_model_id(settings, n_notes)}"
+    if restore:
+        print("Restoring model from file")
+        classifier = tf.keras.models.load_model(checkpoint_path)
+    else:
+        classifier = get_model(settings, n_notes)
 
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
                                                      save_weights_only=False, verbose=1)
@@ -56,7 +59,12 @@ def lstm_train(settings, train, validation):
     except KeyboardInterrupt:
         history = None
         print('\nIntercepted KeyboardInterrupt, evaluating model.')
-    print(classifier.summary())
+
+    tf.keras.utils.plot_model(
+        classifier, to_file=f"output/{settings.network}.png", show_shapes=True,
+        show_layer_names=True, rankdir='BT', expand_nested=True, dpi=96
+    )
+    classifier.summary()
 
     if history is not None:
         # Plot accuracy
@@ -94,7 +102,7 @@ def lstm_test(settings, test):
     log = 'output/results.csv'
     txt = []
     if not os.path.isfile(log):
-        txt.append('composer,network,loss,optimizer,activation,acc,loss')
+        txt.append('composer,network,loss,optimizer,activation,loss,acc')
 
     txt.append(
         f'{settings.composer},{settings.network},{settings.loss},{settings.optimizer._name},{settings.final_activation},{test_loss},{test_acc}')
