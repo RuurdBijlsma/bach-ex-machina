@@ -1,11 +1,12 @@
 import numpy as np
 from hmmlearn.hmm import GaussianHMM
-import settings
+import constants
 from midi import MIDI, Encoded
 from prepare_data import process, get_notes_range, restore
 import pickle
 import cv2
 import os
+from lstm_settings import settings
 
 
 def fit_model(data, n_components):
@@ -44,20 +45,20 @@ def best_model(data):
 
 def create_model(input_data, n_components, input_name):
     hmm = fit_model(input_data, n_components)
-    with open(f"data/hmm_{input_name}_{n_components}.pkl", "wb") as file:
+    with open(f"output/hmm_{input_name}_{n_components}.pkl", "wb") as file:
         pickle.dump(hmm, file)
         print("Exported model to file!")
     return hmm
 
 
 def load_model(n_components, input_name):
-    with open(f"data/hmm_{input_name}_{n_components}.pkl", "rb") as file:
+    with open(f"output/hmm_{input_name}_{n_components}.pkl", "rb") as file:
         print("Imported model from file!")
         return pickle.load(file)
 
 
 def get_model(input_data, n_components, input_name, recreate_override=False):
-    if recreate_override or not os.path.isfile(f"data/hmm_{input_name}_{n_components}.pkl"):
+    if recreate_override or not os.path.isfile(f"output/hmm_{input_name}_{n_components}.pkl"):
         print(f"Creating model (n_components={n_components}, input_name={input_name})")
         return create_model(input_data, n_components, input_name)
     print(f"Loading model (n_components={n_components}, input_name={input_name})")
@@ -66,7 +67,7 @@ def get_model(input_data, n_components, input_name, recreate_override=False):
 
 def main():
     m = MIDI(settings.ticks_per_second)
-    input_file = os.path.abspath('data/africa_result.midi')
+    input_file = os.path.abspath('output/africa_result.midi')
     input_name = os.path.splitext(os.path.basename(input_file))[0]
 
     n_components = 55
@@ -78,7 +79,7 @@ def main():
     input_data = process(data, start, end, add_end_token=False)
 
     input_data[input_data > 0] = 1
-    cv2.imwrite(f"data/hmm_input_{input_name}.png", input_data.T * 255)
+    cv2.imwrite(f"output/hmm_input_{input_name}.png", input_data.T * 255)
     # input_data = input_data[:, input_data.sum(axis=0) > 0]
 
     model = get_model(input_data, n_components, input_name, False)
@@ -86,12 +87,12 @@ def main():
     samples = model.sample(500)[0]
     samples[samples < samples_threshold] = 0
     samples[samples > 0] = 100
-    cv2.imwrite(f"data/hmm_samples_{input_name}_{n_components}.png", samples.T * 2)
+    cv2.imwrite(f"output/hmm_samples_{input_name}_{n_components}.png", samples.T * 2)
 
     print(samples)
     samples_data = samples.clip(0, 127).astype(np.int8)
     restored_data = restore(samples_data, start, end, remove_end_token=False)
-    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/predicted_{input_name}_{n_components}.midi")
+    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"output/predicted_{input_name}_{n_components}.midi")
 
 
 if __name__ == '__main__':

@@ -1,9 +1,7 @@
 import os
 from typing import Optional, Tuple, Iterable
-
 import pandas as pd
-
-import settings
+import constants
 from midi import MIDI
 
 CSV_FILE = 'maestro-v3.0.0.csv'
@@ -15,14 +13,14 @@ class Dataset:
     def __init__(self,
                  composer: Optional[str] = None,
                  ):
-        self.index = pd.read_csv(os.path.join(settings.maestro_path, CSV_FILE))
+        self.index = pd.read_csv(os.path.join(constants.maestro_path, CSV_FILE))
 
         if composer is not None:
             self.index = self.index[self.index['canonical_composer'].str.contains(composer, case=False)]
 
     def _iter_split(self, split: str) -> TSplit:
         dataset = self.index[self.index['split'] == split]
-        midi_paths = dataset['midi_filename'].map(lambda path: os.path.join(settings.maestro_path, path))
+        midi_paths = dataset['midi_filename'].map(lambda path: os.path.join(constants.maestro_path, path))
         return dataset['canonical_title'], midi_paths
 
     @property

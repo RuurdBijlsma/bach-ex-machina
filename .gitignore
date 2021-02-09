@@ -137,5 +137,7 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-
-settings.py
+constants.py
+output/*
+!output/OUTPUT_DATA_GOES_HERE
+input/maestro-v3.0.0

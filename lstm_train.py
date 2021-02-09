@@ -1,17 +1,23 @@
 import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 import tensorflow as tf
 
-import settings
-from lstm_model import get_model
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_virtual_device_configuration(gpus[0], [
+    tf.config.experimental.VirtualDeviceConfiguration(memory_limit=8192)])
+
+from matplotlib import pyplot as plt
+from models import get_model
 from prepare_data import get_processed_data, ts_generator
+from lstm_settings import settings, get_model_id
 
 
 def main():
-    # Importing the data
-    tf.debugging.set_log_device_placement(True)
+    # tf.debugging.set_log_device_placement(True)
+    # Importing the output
 
-    (train, test, validation), _ = get_processed_data(settings.composer)
+    (train, test, validation), _ = get_processed_data(settings.ticks_per_second, settings.composer)
     n_notes = train.shape[1]
 
     train[train > 0] = 1
@@ -23,32 +29,58 @@ def main():
     validation = ts_generator(validation, settings.window_size)
 
     # Initializing the classifier Network
-    classifier, model_name = get_model(n_notes, settings.window_size)
+    classifier = get_model(settings, n_notes)
 
-    checkpoint_path = f"data/{settings.composer}_checkpoint_n{n_notes}_tps{settings.ticks_per_second}"
+    checkpoint_path = f"output/{get_model_id(settings, n_notes)}"
+
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_best_only=True,
                                                      save_weights_only=False, verbose=1)
 
-    # Fitting the data to the model
+    # Fitting the output to the model
     try:
-        classifier.fit(train,
-                       epochs=20,
-                       callbacks=[cp_callback],
-                       validation_data=validation)
+        history = classifier.fit(train,
+                                 epochs=25,
+                                 batch_size=32,
+                                 callbacks=[cp_callback],
+                                 validation_data=validation)
+        print(history)
     except KeyboardInterrupt:
+        history = None
         print('\nIntercepted KeyboardInterrupt, evaluating model.')
     print(classifier.summary())
+
+    if history is not None:
+        # Plot accuracy
+        plt.plot(history.history['accuracy'])
+        plt.plot(history.history['val_accuracy'])
+        plt.title('Model accuracy')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Validation'], loc='upper left')
+        plt.show()
+        plt.savefig(f"output/acc_{get_model_id(settings, n_notes)}.png")
+
+        # Plot loss
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Validation'], loc='upper left')
+        plt.show()
+        plt.savefig(f"output/loss_{get_model_id(settings, n_notes)}.png")
 
     test_loss, test_acc = classifier.evaluate(test)
     print('Test Loss: {}'.format(test_loss))
     print('Test Accuracy: {}'.format(test_acc))
 
-    log = 'data/log.csv'
+    log = 'output/results.csv'
     txt = []
     if not os.path.isfile(log):
-        txt.append('name,composer,loss,accuracy')
+        txt.append('composer,network,loss,optimizer,activation,acc,loss')
 
-    txt.append(f'{model_name},{settings.composer},{test_loss},{test_acc}')
+    txt.append(
+        f'{settings.composer},{settings.network},{settings.loss},{settings.optimizer._name},{settings.final_activation},{test_loss},{test_acc}')
 
     with open(log, 'a') as f:
         f.writelines('\n'.join(txt) + '\n')

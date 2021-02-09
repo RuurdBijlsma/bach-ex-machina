@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import cv2
 
-Encoded = namedtuple('Encoded', 'data key_signature time_signature')
+Encoded = namedtuple('Encoded', 'output key_signature time_signature')
 
 
 class MIDI:
@@ -98,7 +98,7 @@ class MIDI:
         mid.save(midi_path)
         print(f"✅ Saved Encoded -> Midi ({midi_path})")
 
-    def from_midi(self, midi_path, img_output='data/arr.png'):
+    def from_midi(self, midi_path, img_output='output/arr.png'):
         Note = namedtuple('Note', 'value time velocity')
         mid = MidiFile(midi_path)
         key_signature = None
@@ -129,7 +129,7 @@ class MIDI:
 
 if __name__ == '__main__':
     m = MIDI()
-    encoded = m.from_midi("data/unfin.midi")
-    m.to_midi(encoded, 'data/unfin_result.midi')
-    # encoded = from_midi("data/sandstorm.mid")
-    # to_midi(encoded, 'data/sandstorm_result.midi')
+    encoded = m.from_midi("output/unfin.midi")
+    m.to_midi(encoded, 'output/unfin_result.midi')
+    # encoded = from_midi("output/sandstorm.mid")
+    # to_midi(encoded, 'output/sandstorm_result.midi')

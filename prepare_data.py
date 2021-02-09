@@ -7,41 +7,43 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
-import settings
+import constants
 from dataset import Dataset
 from midi import MIDI, Encoded
 
 
-def dump_pickle(paths, output_file):
-    song_data = [x.data.T for x in get_pool().map(MIDI(settings.ticks_per_second).from_midi, paths)]
+def dump_pickle(tps, paths, output_file):
+    song_data = [x.data.T for x in get_pool().map(MIDI(tps).from_midi, paths)]
     pickle.dump(song_data, open(output_file, "wb"))
     print(f"Dumped '{output_file}' pickle")
 
 
-def dump_all_midi_data(composer, overwrite=False):
+def dump_all_midi_data(tps, composer, overwrite=False):
     """
     Dump all encoded midi objects to files
+    :param tps: Ticks per second
     :param overwrite: If set to False this function will skip dumping to existing .pkl file
     :param composer: Composer of the midi files to pass to Dataset
     """
     d = Dataset(composer)
-    train_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
-    test_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
-    validation_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
+    train_pickle = os.path.join(constants.maestro_path, f"{composer}_{tps}tps_train.pkl")
+    test_pickle = os.path.join(constants.maestro_path, f"{composer}_{tps}tps_test.pkl")
+    validation_pickle = os.path.join(constants.maestro_path, f"{composer}_{tps}tps_validation.pkl")
     if overwrite or not os.path.isfile(train_pickle):
-        dump_pickle(d.train[1], train_pickle)
+        dump_pickle(tps, d.train[1], train_pickle)
     if overwrite or not os.path.isfile(test_pickle):
-        dump_pickle(d.test[1], test_pickle)
+        dump_pickle(tps, d.test[1], test_pickle)
     if overwrite or not os.path.isfile(validation_pickle):
-        dump_pickle(d.validation[1], validation_pickle)
+        dump_pickle(tps, d.validation[1], validation_pickle)
 
 
-def get_train_test_val_lists(composer):
-    dump_all_midi_data(composer)
+def get_train_test_val_lists(tps, composer):
+    dump_all_midi_data(tps, composer)
 
-    train_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_train.pkl")
-    test_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_test.pkl")
-    validation_pickle = os.path.join(settings.maestro_path, f"{composer}_{settings.ticks_per_second}tps_validation.pkl")
+    train_pickle = os.path.join(constants.maestro_path, f"{composer}_{tps}tps_train.pkl")
+    test_pickle = os.path.join(constants.maestro_path, f"{composer}_{tps}tps_test.pkl")
+    validation_pickle = os.path.join(constants.maestro_path,
+                                     f"{composer}_{tps}tps_validation.pkl")
 
     train = pickle.load(open(train_pickle, 'rb'))
     test = pickle.load(open(test_pickle, 'rb'))
@@ -50,13 +52,15 @@ def get_train_test_val_lists(composer):
     return train, test, validation
 
 
-def get_notes_range(composer=None, data=None):
+def get_notes_range(tps=None, composer=None, data=None):
     if data is None:
-        train, test, validation = get_train_test_val_lists(composer)
+        if tps is None:
+            print("tps parameter must be set if output is not set")
+        train, test, validation = get_train_test_val_lists(tps, composer)
         data = train + test + validation
         data = np.concatenate(data, axis=0)
     distribution = data.sum(axis=0)
-    # np.savetxt(f"data/{composer}_distribution.csv", distribution, delimiter=",")
+    # np.savetxt(f"output/{composer}_distribution.csv", distribution, delimiter=",")
     start = np.argmax(distribution > 0)
     end = distribution.size - np.argmax(distribution[::-1] > 0) - 1
 
@@ -131,9 +135,9 @@ def create_dataset(x, y, window_size):
             )
 
 
-def get_processed_data(composer, dtype=np.float):
-    train, test, validation = get_train_test_val_lists(composer)
-    start, end = get_notes_range(composer)
+def get_processed_data(tps, composer, dtype=np.float):
+    train, test, validation = get_train_test_val_lists(tps, composer)
+    start, end = get_notes_range(tps, composer)
 
     train = np.concatenate([process(data, start, end) for data in train], axis=0)
     test = np.concatenate([process(data, start, end) for data in test], axis=0)
@@ -153,21 +157,13 @@ def ts_generator(dataset, window_size: int) -> TimeseriesGenerator:
 def test_process_restore():
     m = MIDI()
     input_midi_name = 'unfin'
-    encoded = m.from_midi(f'data/{input_midi_name}.midi')
+    encoded = m.from_midi(f'output/{input_midi_name}.midi')
     data = encoded.data.T
     start, end = get_notes_range(data=data)
     data = process(data, start, end)
 
     restored_data = restore(data, start, end)
-    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"data/test_{input_midi_name}.midi")
-
-
-def test_train_data():
-    composer = "bach"
-    (train, test, validation), (start, end) = get_processed_data(composer)
-    (train_x, train_y) = to_input_output(train)
-    (test_x, test_y) = to_input_output(test)
-    (val_x, val_y) = to_input_output(validation)
+    m.to_midi(Encoded(restored_data.T, *encoded[1:]), f"output/test_{input_midi_name}.midi")
 
 
 def main():
