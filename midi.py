@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import cv2
 
-Encoded = namedtuple('Encoded', 'output key_signature time_signature')
+Encoded = namedtuple('Encoded', 'data key_signature time_signature')
 
 
 class MIDI:
