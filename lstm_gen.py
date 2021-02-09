@@ -15,7 +15,7 @@ from midi import MIDI, Encoded
 from prepare_data import process, restore, get_notes_range
 
 
-def main():
+def generate(settings):
     m = MIDI(settings.ticks_per_second)
 
     input_file = os.path.abspath('input/unfin.midi')
@@ -63,4 +63,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    generate(settings)

@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from models import get_model
 from prepare_data import get_processed_data, ts_generator
 from lstm_settings import settings, get_model_id
+from lstm_gen import generate
 
 
 def main():
@@ -18,7 +19,6 @@ def main():
     # Importing the output
 
     (train, test, validation), _ = get_processed_data(settings.ticks_per_second, settings.composer)
-    n_notes = train.shape[1]
 
     train[train > 0] = 1
     test[test > 0] = 1
@@ -27,6 +27,17 @@ def main():
     train = ts_generator(train, settings.window_size)
     test = ts_generator(test, settings.window_size)
     validation = ts_generator(validation, settings.window_size)
+
+    lstm_train(settings, train, validation)
+
+    lstm_test(settings, test)
+
+    generate(settings)
+
+
+def lstm_train(settings, train, validation):
+    n_notes = train.data.shape[1]
+    print(f"Training model: {get_model_id(settings, n_notes)}")
 
     # Initializing the classifier Network
     classifier = get_model(settings, n_notes)
@@ -40,10 +51,8 @@ def main():
     try:
         history = classifier.fit(train,
                                  epochs=25,
-                                 batch_size=32,
                                  callbacks=[cp_callback],
                                  validation_data=validation)
-        print(history)
     except KeyboardInterrupt:
         history = None
         print('\nIntercepted KeyboardInterrupt, evaluating model.')
@@ -57,8 +66,8 @@ def main():
         plt.ylabel('Accuracy')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Validation'], loc='upper left')
-        plt.show()
         plt.savefig(f"output/acc_{get_model_id(settings, n_notes)}.png")
+        plt.show()
 
         # Plot loss
         plt.plot(history.history['loss'])
@@ -67,8 +76,16 @@ def main():
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Validation'], loc='upper left')
-        plt.show()
         plt.savefig(f"output/loss_{get_model_id(settings, n_notes)}.png")
+        plt.show()
+
+
+def lstm_test(settings, test):
+    n_notes = test.data.shape[1]
+    print(f"Testing model from checkpoint: {get_model_id(settings, n_notes)}")
+
+    checkpoint_path = f"output/{get_model_id(settings, n_notes)}"
+    classifier = tf.keras.models.load_model(checkpoint_path)
 
     test_loss, test_acc = classifier.evaluate(test)
     print('Test Loss: {}'.format(test_loss))

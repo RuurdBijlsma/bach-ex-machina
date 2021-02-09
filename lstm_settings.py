@@ -27,8 +27,8 @@ settings = TrainSettings(
     # network='medium',
     network='big',
 
-    loss='categorical_crossentropy',
-    # loss='binary_crossentropy',
+    # loss='categorical_crossentropy',
+    loss='binary_crossentropy',
     # loss='mse',
 
     # optimizer = SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
