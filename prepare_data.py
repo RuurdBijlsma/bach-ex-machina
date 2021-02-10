@@ -4,7 +4,7 @@ import os
 import pickle
 
 import numpy as np
-import tensorflow as tf
+from tf import tf
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
 import constants
