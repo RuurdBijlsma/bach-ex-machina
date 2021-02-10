@@ -18,14 +18,14 @@ def get_model_id(settings, n_notes):
 
 base_settings = TrainSettings(
     ticks_per_second=8,
-    window_size=64,
+    window_size=96,
     threshold_scale=.7,
 
     # composer=None,
     composer='bach',
 
-    network='medium',
-    # network='big',
+    # network='medium',
+    network='big',
 
     loss='categorical_crossentropy',
     # loss='binary_crossentropy',

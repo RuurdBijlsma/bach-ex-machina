@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from lstm_settings import base_settings, get_model_id
 from models import get_model
 from prepare_data import get_processed_data, ts_generator
-from lstm_gen import generate
+from lstm_gen import run_generation
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
 
     lstm_test(base_settings, test)
 
-    generate(base_settings)
+    run_generation(base_settings)
 
 
 def lstm_train(settings, train, validation, restore=False):
