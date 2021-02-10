@@ -1,4 +1,4 @@
-from tensorflow.keras.optimizers import Nadam, SGD
+from tensorflow.keras import optimizers
 from collections import namedtuple
 
 TrainSettings = namedtuple('Encoded', 'ticks_per_second, window_size threshold_scale '
@@ -32,7 +32,7 @@ base_settings = TrainSettings(
     # loss='mse',
 
     # optimizer = SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
-    optimizer=Nadam(learning_rate=0.005),
+    optimizer=optimizers.Nadam(learning_rate=0.005),
 
     # final_activation='softmax',
     final_activation='sigmoid',

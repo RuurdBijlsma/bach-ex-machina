@@ -1,17 +1,19 @@
 import os
 
+from matplotlib import pyplot as plt
+
+from lstm_gen import generate
+from lstm_settings import base_settings, get_model_id
+from models import get_model
+from prepare_data import get_processed_data, ts_generator
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 import tensorflow as tf
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_virtual_device_configuration(gpus[0], [
-    tf.config.experimental.VirtualDeviceConfiguration(memory_limit=8192)])
-
-from matplotlib import pyplot as plt
-from models import get_model
-from prepare_data import get_processed_data, ts_generator
-from lstm_settings import base_settings, get_model_id
-from lstm_gen import generate
+    tf.config.experimental.VirtualDeviceConfiguration(memory_limit=8192)
+])
 
 
 def main():
