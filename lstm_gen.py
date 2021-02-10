@@ -52,11 +52,8 @@ def generate(settings):
     sample_max = np.max(samples)
 
     threshold = sample_max * settings.threshold_scale
-    samples[samples < threshold] = 0
+    samples = (samples > threshold) * 100
 
-    scale = 100 / (sample_max or 1)
-    print(f'Scaling values by {scale:.1f}')
-    samples[samples > 0] = scale
     samples_data = samples.clip(0, 127).astype(np.int8)
 
     cv2.imwrite(f"output/samples_{input_name}_{get_model_id(settings, n_notes)}.png", samples.T)
