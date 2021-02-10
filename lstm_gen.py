@@ -43,15 +43,16 @@ def run_generation(settings):
 
 def generate(settings, classifier, input_data, n_notes, file_name):
     output_size = settings.window_size * 4
-    output = np.empty((output_size, n_notes))
+    output = np.zeros((output_size, n_notes))
     output[:settings.window_size] = input_data[-settings.window_size:]
-    start = time.perf_counter()
-    for i in tqdm(range(settings.window_size, output_size)):
-        input_window = np.expand_dims(output[:i], 0)
-        sample = classifier(input_window)
 
-        sample = np.array(sample)
-        sample = (sample > settings.threshold_scale) * 100
+    start = time.perf_counter()
+
+    for i in tqdm(range(settings.window_size, output_size)):
+        start_window = i - settings.window_size
+        input_window = np.expand_dims(output[start_window:i], 0)
+
+        sample = classifier(input_window)
 
         output[i] = sample
 

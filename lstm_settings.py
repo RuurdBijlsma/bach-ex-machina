@@ -24,6 +24,7 @@ base_settings = TrainSettings(
     # composer=None,
     composer='bach',
 
+    # network='small',
     # network='medium',
     network='big',
 
