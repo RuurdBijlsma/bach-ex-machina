@@ -8,7 +8,7 @@ tf.config.experimental.set_virtual_device_configuration(gpus[0], [
     tf.config.experimental.VirtualDeviceConfiguration(memory_limit=8192)])
 
 import time
-from lstm_settings import settings, get_model_id
+from lstm_settings import base_settings, get_model_id
 import cv2
 import numpy as np
 from midi import MIDI, Encoded
@@ -64,4 +64,4 @@ def generate(settings):
 
 
 if __name__ == '__main__':
-    generate(settings)
+    generate(base_settings)

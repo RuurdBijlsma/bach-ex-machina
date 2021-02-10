@@ -10,7 +10,7 @@ tf.config.experimental.set_virtual_device_configuration(gpus[0], [
 from matplotlib import pyplot as plt
 from models import get_model
 from prepare_data import get_processed_data, ts_generator
-from lstm_settings import settings, get_model_id
+from lstm_settings import base_settings, get_model_id
 from lstm_gen import generate
 
 
@@ -18,21 +18,21 @@ def main():
     # tf.debugging.set_log_device_placement(True)
     # Importing the output
 
-    (train, test, validation), _ = get_processed_data(settings.ticks_per_second, settings.composer)
+    (train, test, validation), _ = get_processed_data(base_settings.ticks_per_second, base_settings.composer)
 
     train[train > 0] = 1
     test[test > 0] = 1
     validation[validation > 0] = 1
 
-    train = ts_generator(train, settings.window_size)
-    test = ts_generator(test, settings.window_size)
-    validation = ts_generator(validation, settings.window_size)
+    train = ts_generator(train, base_settings.window_size)
+    test = ts_generator(test, base_settings.window_size)
+    validation = ts_generator(validation, base_settings.window_size)
 
-    lstm_train(settings, train, validation)
+    lstm_train(base_settings, train, validation)
 
-    lstm_test(settings, test)
+    lstm_test(base_settings, test)
 
-    generate(settings)
+    generate(base_settings)
 
 
 def lstm_train(settings, train, validation, restore=False):

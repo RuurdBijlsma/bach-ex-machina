@@ -6,7 +6,7 @@ from prepare_data import process, get_notes_range, restore
 import pickle
 import cv2
 import os
-from lstm_settings import settings
+from lstm_settings import base_settings
 
 
 def fit_model(data, n_components):
@@ -66,7 +66,7 @@ def get_model(input_data, n_components, input_name, recreate_override=False):
 
 
 def main():
-    m = MIDI(settings.ticks_per_second)
+    m = MIDI(base_settings.ticks_per_second)
     input_file = os.path.abspath('output/africa_result.midi')
     input_name = os.path.splitext(os.path.basename(input_file))[0]
 

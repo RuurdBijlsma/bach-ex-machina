@@ -16,7 +16,7 @@ def get_model_id(settings, n_notes):
            f"ws{settings.window_size}"
 
 
-settings = TrainSettings(
+base_settings = TrainSettings(
     ticks_per_second=8,
     window_size=96,
     threshold_scale=.7,
