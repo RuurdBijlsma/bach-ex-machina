@@ -1,4 +1,5 @@
 from tf import tf
+import os
 from matplotlib import pyplot as plt
 from lstm_settings import base_settings, get_model_id
 from models import get_model
@@ -94,10 +95,10 @@ def lstm_test(settings, test):
     log = 'output/results.csv'
     txt = []
     if not os.path.isfile(log):
-        txt.append('composer,network,loss,optimizer,activation,loss,acc')
+        txt.append('composer,network,loss,optimizer,activation,window,loss,acc')
 
     txt.append(
-        f'{settings.composer},{settings.network},{settings.loss},{settings.optimizer._name},{settings.final_activation},{test_loss},{test_acc}')
+        f'{settings.composer},{settings.network},{settings.loss},{settings.optimizer._name},{settings.final_activation},{settings.window_size},{test_loss},{test_acc}')
 
     with open(log, 'a') as f:
         f.writelines('\n'.join(txt) + '\n')
