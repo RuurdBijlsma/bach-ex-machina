@@ -1,21 +1,11 @@
+from tf import tf
 import os
 import time
-
 import cv2
 import numpy as np
-
 from lstm_settings import base_settings, get_model_id
 from midi import MIDI, Encoded
 from prepare_data import process, restore, get_notes_range
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
-import tensorflow as tf
-
-gpus = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_virtual_device_configuration(gpus[0], [
-    tf.config.experimental.VirtualDeviceConfiguration(memory_limit=8192)
-])
-
 
 def generate(settings):
     m = MIDI(settings.ticks_per_second)
