@@ -48,13 +48,34 @@ def generate(settings, classifier, input_data, n_notes, file_name):
 
     start = time.perf_counter()
 
+    max_notes = np.max(np.sum(input_data, axis=1))
+
     for i in tqdm(range(settings.window_size, output_size)):
         start_window = i - settings.window_size
         input_window = np.expand_dims(output[start_window:i], 0)
 
         sample = classifier(input_window)
+        sample = np.array(sample)
 
-        output[i] = sample
+        # Encourage keeping the same note
+        sample += input_window[:, -1] * 3
+
+        active_notes = np.sum(input_window[:, -1])
+
+        # Decide to alter number of notes
+        change_probability = .7 if active_notes == 0 else .1
+        if np.random.random() < change_probability:
+            active_notes = active_notes + np.random.choice((-1, 1))
+            active_notes = min(max_notes, max(0, active_notes))
+
+        # Convert the output to a probability vector, and use it to pick `active_notes` notes.
+        note_probability = np.squeeze(sample)
+        note_probability = note_probability / np.sum(note_probability)
+        result = np.random.choice(n_notes, int(active_notes), replace=False, p=note_probability)
+
+        # probably a better way to do this
+        for v in result:
+            output[i, v] = 1
 
     print(f'Generated {output.shape[0]} ticks in {(time.perf_counter() - start):.2f}s')
 
