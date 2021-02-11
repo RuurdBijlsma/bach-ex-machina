@@ -2,6 +2,7 @@ import os
 import time
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
@@ -48,7 +49,11 @@ def generate(settings, classifier, input_data, n_notes, file_name):
 
     start = time.perf_counter()
 
-    max_notes = np.max(np.sum(input_data, axis=1))
+    notes_per_tick = np.sum(input_data, axis=1)
+    max_notes = np.max(notes_per_tick)
+    mean_notes = np.mean(notes_per_tick)
+
+    note_history = []
 
     for i in tqdm(range(settings.window_size, output_size)):
         start_window = i - settings.window_size
@@ -56,30 +61,44 @@ def generate(settings, classifier, input_data, n_notes, file_name):
 
         sample = classifier(input_window)
         sample = np.array(sample)
+        sample_max = np.max(sample)
+
+        candidates = sample[sample > sample_max - (2 * np.std(sample))].shape[0]
+        last_step_notes = np.sum(input_window[:, -1])
+
+        a = np.mean([candidates] * 2 + [last_step_notes, mean_notes])
+        active_notes = int(min(np.round(a), max_notes))
+
+        # plt.plot(np.squeeze(sample))
+        # plt.title(f'{candidates} notes')
+        # plt.show()
+
+        # Remove most unlikely notes TODO does this help more than it hurts?
+        sample[sample < sample_max * .005] = 0
 
         # Encourage keeping the same note
-        sample += input_window[:, -1] * 3
-
-        active_notes = np.sum(input_window[:, -1])
-
-        # Decide to alter number of notes
-        change_probability = .7 if active_notes == 0 else .1
-        if np.random.random() < change_probability:
-            active_notes = active_notes + np.random.choice((-1, 1))
-            active_notes = min(max_notes, max(0, active_notes))
+        sample += sample * input_window[:, -1] * 2
 
         # Convert the output to a probability vector, and use it to pick `active_notes` notes.
         note_probability = np.squeeze(sample)
         note_probability = note_probability / np.sum(note_probability)
-        result = np.random.choice(n_notes, int(active_notes), replace=False, p=note_probability)
+        result = np.random.choice(n_notes, active_notes, replace=False, p=note_probability)
 
         # probably a better way to do this
         for v in result:
             output[i, v] = 1
 
+        note_history.append(active_notes)
+
     print(f'Generated {output.shape[0]} ticks in {(time.perf_counter() - start):.2f}s')
 
-    cv2.imwrite(f"output/raw_{file_name}.png", output.T * 255)
+    rgb = cv2.cvtColor(output.astype(np.float32).T * 255, cv2.COLOR_GRAY2BGR)
+    cv2.line(rgb, (settings.window_size, 0), (settings.window_size, 128), color=(0, 0, 255))
+    cv2.imwrite(f"output/raw_{file_name}.png", rgb)
+
+    plt.plot(note_history)
+    plt.title('Active notes')
+    plt.show()
 
     # Remove input from result
     samples = output[settings.window_size:]

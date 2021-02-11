@@ -1,5 +1,6 @@
-from tf import optimizers
 from collections import namedtuple
+
+from tf import optimizers
 
 TrainSettings = namedtuple('Encoded', 'ticks_per_second, window_size threshold_scale '
                                       'composer network loss optimizer final_activation')
@@ -32,7 +33,7 @@ base_settings = TrainSettings(
     # loss='binary_crossentropy',
     # loss='mse',
 
-    # optimizer = SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
+    # optimizer=optimizers.SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
     optimizer=optimizers.Nadam(learning_rate=0.005),
 
     # final_activation='softmax',
