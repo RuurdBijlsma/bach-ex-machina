@@ -55,9 +55,15 @@ def generate(settings, classifier, input_data, n_notes, file_name):
 
     note_history = []
 
+    end = output_size
     for i in tqdm(range(settings.window_size, output_size)):
         start_window = i - settings.window_size
         input_window = np.expand_dims(output[start_window:i], 0)
+
+        if np.all(input_window == input_window[0, 0, :]):
+            print('All identical, terminating early')
+            end = start_window + settings.ticks_per_second * 3
+            break
 
         sample = classifier(input_window)
         sample = np.array(sample)
@@ -69,10 +75,6 @@ def generate(settings, classifier, input_data, n_notes, file_name):
         a = np.mean([candidates, last_step_notes, mean_notes])
         active_notes = int(min(np.round(a), max_notes))
 
-        # plt.plot(np.squeeze(sample))
-        # plt.title(f'{candidates} notes')
-        # plt.show()
-
         # Remove most unlikely notes TODO does this help more than it hurts?
         sample[sample < sample_max * .005] = 0
 
@@ -82,6 +84,12 @@ def generate(settings, classifier, input_data, n_notes, file_name):
         # Convert the output to a probability vector, and use it to pick `active_notes` notes.
         note_probability = np.squeeze(sample)
         note_probability = note_probability / np.sum(note_probability)
+
+        nonzero_prob = np.sum(note_probability > 0)
+        if nonzero_prob < active_notes:
+            print(f'Can not pick {active_notes} notes, as only {nonzero_prob} notes have p > 0')
+            active_notes = nonzero_prob
+
         result = np.random.choice(n_notes, active_notes, replace=False, p=note_probability)
 
         # probably a better way to do this
@@ -105,12 +113,12 @@ def generate(settings, classifier, input_data, n_notes, file_name):
     plt.title('Active notes')
     plt.show()
 
-    # Remove input from result
-    samples = output[settings.window_size:]
+    # Remove input from result and truncate after early stop
+    samples = output[settings.window_size:end]
 
     # Remove single values
     for i in range(1, samples.shape[0] - 1):
-        window = samples[i-1:i+2]
+        window = samples[i - 1:i + 2]
         active = np.sum(window, axis=0)
         window[1, active == 1] = 0
 
