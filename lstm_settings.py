@@ -19,7 +19,7 @@ def get_model_id(settings, n_notes):
 
 base_settings = TrainSettings(
     ticks_per_second=8,
-    window_size=96,
+    window_size=128,
     threshold_scale=.7,
 
     # composer=None,
@@ -35,6 +35,7 @@ base_settings = TrainSettings(
 
     # optimizer=optimizers.SGD(learning_rate=0.01, momentum=0.7, nesterov=True),
     optimizer=optimizers.Nadam(learning_rate=0.005),
+    # optimizer=optimizers.Adam(learning_rate=0.005),
 
     # final_activation='softmax',
     final_activation='sigmoid',
