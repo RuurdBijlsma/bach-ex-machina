@@ -66,7 +66,7 @@ def generate(settings, classifier, input_data, n_notes, file_name):
         candidates = sample[sample > sample_max - (2 * np.std(sample))].shape[0]
         last_step_notes = np.sum(input_window[:, -1])
 
-        a = np.mean([candidates] * 2 + [last_step_notes, mean_notes])
+        a = np.mean([candidates, last_step_notes, mean_notes])
         active_notes = int(min(np.round(a), max_notes))
 
         # plt.plot(np.squeeze(sample))
@@ -94,6 +94,11 @@ def generate(settings, classifier, input_data, n_notes, file_name):
 
     rgb = cv2.cvtColor(output.astype(np.float32).T * 255, cv2.COLOR_GRAY2BGR)
     cv2.line(rgb, (settings.window_size, 0), (settings.window_size, 128), color=(0, 0, 255))
+
+    plt.imshow(rgb / 255)
+    plt.title('Generated')
+    plt.show()
+
     cv2.imwrite(f"output/raw_{file_name}.png", rgb)
 
     plt.plot(note_history)
@@ -103,11 +108,14 @@ def generate(settings, classifier, input_data, n_notes, file_name):
     # Remove input from result
     samples = output[settings.window_size:]
 
-    # Machine Learning™
-    # The model isn't very good at outputting zero, so we remove everything below this arbitrary threshold
-    sample_max = np.max(samples)
-    threshold = sample_max * settings.threshold_scale
-    samples = (samples > threshold) * 100
+    # Remove single values
+    for i in range(1, samples.shape[0] - 1):
+        window = samples[i-1:i+2]
+        active = np.sum(window, axis=0)
+        window[1, active == 1] = 0
+
+    # Scale result up
+    samples *= 100
 
     samples_data = samples.clip(0, 127).astype(np.int8)
 
