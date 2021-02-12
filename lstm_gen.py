@@ -79,7 +79,7 @@ def generate(settings, classifier, input_data, n_notes, file_name):
         sample[sample < sample_max * .005] = 0
 
         # Encourage keeping the same note
-        sample += sample * input_window[:, -1] * 2
+        sample += sample * input_window[:, -1]
 
         # Convert the output to a probability vector, and use it to pick `active_notes` notes.
         note_probability = np.squeeze(sample)
