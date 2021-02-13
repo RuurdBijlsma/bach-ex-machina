@@ -99,7 +99,7 @@ def main():
 
     n_components = 36
     cov_type = 'diag'
-    samples_threshold = 0.98
+    samples_threshold = 0.97
 
     encoded = m.from_midi(input_file)
     data = encoded.data.T
