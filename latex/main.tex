@@ -1,4 +1,8 @@
 \documentclass[11pt, twocolumn]{article}
+
+\usepackage{booktabs}
+\usepackage[table,xcdraw]{xcolor}
+
 \usepackage{bnaic}
 \usepackage[ruled,vlined]{algorithm2e}
 \usepackage{graphicx}
@@ -11,6 +15,12 @@
 \usepackage{lipsum}
 \usepackage{comment}
 \usepackage{iftex}
+\usepackage{todonotes}
+\usepackage{amsmath}
+
+% Uncomment next two lines to disable figures (helps to see report length)
+%\usepackage[figuresonly,nolists,nomarkers]{endfloat}
+%\renewcommand{\processdelayedfloats}{}
 
 \usepackage{fancyhdr}
 \fancypagestyle{firstpage}
@@ -65,54 +75,195 @@ In training our model we will use a loss function, but its very difficult to cre
 
 \end{abstract}
 \section{Introduction}
+An interesting new application of the advances in the machine learning world is the artificial music generation. The ML models don't require explicit training by a human with extensive knowledge of music and it's composition. The models pick up on patterns of harmony and learn on their own. 
 
+In this paper, we use this methodology of artificial music generation for completing the unfinished composition of Johann Sebastian Bach, "The Art of the Fugue". We are using time-series based models to learn the respective patterns and generate a continuation of the unfinished composition. 
 \subsection{Problem}
 % Jorn
-In 1993 a time series prediction competition the Santa Fe Institute organized a time series prediction competition. One of the tasks for this competition was to complete a fugue by Johann Sebastian Bach, which was left unfinished as he died before completing his work. 
+In 1993, a time series prediction competition the Santa Fe Institute organized a time series prediction competition. One of the tasks for this competition was to complete a fugue by Johann Sebastian Bach, which was left unfinished as he died before completing his work. 
 An analysis of the data for this task can be found in \cite{dirstt1993baroque}. In our work, we use an LSTM model to perform the same task. As deep learning techniques such as LSTM models benefit greatly from more input data, a richer dataset than the one for the Santa Fe competition would be very valuable.
 
 \subsection{Dataset}
 % Ruurd
-To train our network we use the MAESTRO v3 dataset \cite{hawthorne2018enabling}. This dataset is composed of over 200 hours of piano performances captured with fine alignment (~3ms) between note labels and audio waveforms. The data consists of MIDI files recorded by a Yamaha Disklavier, a concert-quality acoustic grand piano. 
+To train our network we use the MAESTRO v3 dataset \cite{hawthorne2018enabling}. This dataset is composed of over 200 hours of piano performances captured with fine alignment ($\sim$3ms) between note labels and audio waveforms. The data consists of MIDI files recorded by a Yamaha Disklavier, a concert-quality acoustic grand piano. 
 \par
 The train/test split is provided by the authors of the dataset, this split is configured in a way such that the same composition does not appear in multiple subsets. The music in the dataset is mostly classical, including composed from the 17th to early 20th century.
 
 \subsubsection{MIDI}
-Our music generation method is based entirely around MIDI files. MIDI files provide a compact and real-world representation of instrumental audio, which makes them useful for our training purposes. A MIDI file can consist of one or more tracks. Each of these tracks contain messages, specifying events such as a piano key being pressed or released, or a piano foot paddle being pressed, along the metadata such as the velocity, pitch and precise timing. In the case of a piano, the velocity indicates how hard a key was pressed. 
+Our music generation method is based around MIDI files. MIDI files provide a compact and real-world representation of instrumental audio, which makes them useful for our training purposes. A MIDI file can consist of one or more tracks. For example, Bach's unfinished fugue has four tracks. Each of these tracks contains messages, specifying events such as a piano key being pressed or released, or a piano foot paddle being pressed. A message consists of metadata such as velocity, pitch, and precise timing. In the case of a piano, the velocity indicates how hard a key was pressed. 
 \par
-For our model, we transform the MIDI files to a simpler format. An entire MIDI file is converted to a 2D array with the pitch on one axis, and time on the other axis. This representation is visualized in \autoref{fig:represent}. In MIDI, the pitch is always an integer value between 0 and 128 (exclusive), therefore the size of the 2D array representation is always 128 x time units.
+For our model, we transform the MIDI files to a simpler format. The entire MIDI file is converted to a 2D array with the pitch on one axis, and time on the other axis. This representation is visualized in \autoref{fig:represent}. In MIDI, the pitch is always an integer value between 0 and 128 (exclusive), therefore the size of the 2D array representation is always 128 x time units, time units being the length of the MIDI in ticks.
 \begin{figure*}[h]
     \centering
     \includegraphics[width=\textwidth]{images/data.png}
-    \caption{Example of a slice of the transformed MIDI file. The y-axis represents pitch, the x-axis represents time.}
+    \caption{Example of a slice of the transformed MIDI file. The y-axis represents pitch, the x-axis represents time in ticks.}
     \label{fig:represent}
 \end{figure*}
 \par
-The time units (ticks) used in MIDI are based on the tempo, which can change through each track, and a value called ticks per beat which is a constant value for each MIDI file. In our representation we simplify this by using our own ticks which always represent the same time unit (1/12th of a second) and assigning a velocity in the 2d array when at that timestamp a note was pressed at that level of pitch. For example, in \autoref{fig:represent}, a key was pressed for five ticks (from tick 119 to 123) with a pitch of 47, with a velocity of 72.
-\par
-By using this representation we merge all tracks present in the MIDI file into one format, therefore we support MIDI tracks with any number of tracks. 
-Once we've transformed a MIDI file to this format we can feed it into a number of machine learning models, such as a hidden Markov model or an LSTM. Such models will then output in the same format, so we have also built a way to convert back from the simplified format to a MIDI file, which can be played by a synthesizer (or a computer).
+The time units (ticks) used in MIDI are based on the tempo, which can change through each track, and a value called ticks per beat which is a constant value for each MIDI file. In our representation we simplify this by using our own ticks which always represent the same time unit (1/8th of a second) and assigning a velocity in the 2d array when at the timestamp a note was pressed at that level of pitch. For example, in \autoref{fig:represent}, a key was pressed for five ticks (from tick 119 to 123) with a pitch of 47, with a velocity of 72.
+By using this representation we merge all tracks present in the MIDI file into one format, therefore we support MIDI tracks with any number of tracks.
+
+Once we have transformed a MIDI file to this format, we can feed it into a number of machine learning models, such as a hidden Markov model or an LSTM network. Such models should then output in the same format, so that we can convert the predicted values back to a MIDI file, which can be played by a synthesizer (or a computer).
+
+To reduce the dimensions of the input and output of the models we strip the 2D input array of all rows where there are no notes being pressed. In the Bach set of MIDI files from the Maestro dataset, this reduces the number of possible notes to 85, from 128. A visualization of the unfinished fugue can be seen in \autoref{fig:input_samples}.
+
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images/unfin_array.png}
+    \caption{The unfinished fugue represented in our 2D format. The vertical axis represents pitch, the horizontal axis represents time.}
+    \label{fig:input_samples}
+\end{figure}
     
+\todo[inline]{Explain more data preparation stuff (end note, 88 notes ipv 128 notes, look at code for more}
 \subsection{Objectives}
-% Pranav
+Our main objective for this project are to create a model capable of autonomously generating the ending of a given classical song that's played on a piano. Besides the model we want to create software making the process of generating the ending of a song relatively easy to do.
+
+\section{Baseline Model}
+To help determine the success of our final LSTM model, we will compare it to a non-deep learning based model, namely a hidden Markov Model. We use a Gaussian hidden Markov model and train it on only one input song, Bach's unfinished fugue. The velocity values of the simplified representation are not used in this model, as this leads to more chaotic, less musical sounding results. By only feeding the model a 1 for a note pressed and 0 for silence, we can threshold the output of the model and tune it to audibly produce better results.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images/hmm_unfin_bic.png}
+    \caption{BIC score per N states for the hidden Markov model (lower score is better).}
+    \label{fig:bic}
+\end{figure}
+
+We use a diagonal covariance type for this model. Since we do not know how many states there should be in this hidden Markov model, we calculated the Bayesian information criterion for a model train with every number of states from 1 to 70. The lowest scoring model is the model we used. The score for every number of states can be seen in \autoref{fig:bic}. The best model was found at N states = 36.
+
+The predicted samples from this model were thresholded to produce ones and zeroes, this thresholded 2D array was then converted to a MIDI file, and an image visualizing these notes. This image can be seen in \autoref{fig:hmm_samples}, the produced result would not fool an expert into thinking this was actually produced by Bach, but there is some musical structure to it. The model often produces notes that are held for only one tick, which does not happen happen in the input data.
 
 
-\section{Methods}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images/hmm_samples.png}
+    \caption{Notes generated by the hidden Markov model. The vertical axis represents pitch, the horizontal axis represents time.}
+    \label{fig:hmm_samples}
+\end{figure}
 
-\subsection{Baseline Model}
-To help determine the success of our final LSTM model, we will compare it to a non-deep learning based model, namely a hidden Markov Model. We use a Gaussian hidden Markov model and train it on only the one input song, Bach's unfinished fugue. The velocities values of the simplified representation are not used in this model, as this lead to more chaotic results. By only feeding the model a 1 for a note pressed and a 0 for silence, we can threshold the output of the model and tune it to audibly produce better results.
+\section{LSTM}
+For our project, we chose to use the LSTM architecture. LSTM stands for Long Short-Term Memory and is an architecture of Recurrent Neural Networks (RNNs). Previously, LSTM models have been used to great success in machine translation \cite{googleLSTMtranslation}, music composition \cite{Eck02learningthe} and time series anomaly detection \cite{malhotra2015long}.
 
+An LSTM unit consists of a cell and a number of gates. The cell is what stores the state of the unit (memory), and the gates control the flow of information into and out of the unit. Originally, there were two gates, the input gate and the output gate. Later, the forget gate (or keep gate) was introduced, enabling the LSTM to forget the state in its cell \cite{LSTMSearchSpaceOdyssey}.
+
+\subsection{Model architecture}\label{architecture}
+% Ruurd
+% Explain hyper parameters
+% Epochs
+The architecture of our final model is shown in \autoref{fig:arch}. The starting premise for our architecture was to have an LSTM layer and a fully connected layer with the number of possible notes as the output size. We found that this model was not able to really learn the structure of the music. This model performed with about 1.1\% accuracy, meaning it essentially put out random notes (88 possible notes, 1/88 is about 0.011). To try to improve the model, we increased the depth of it. We added two more fully connected layers, another LSTM layer and a 1D convolutional layer at the start. Using the SGD optimizer, we measured an accuracy of ~27\% on the test data. We named this architecture "medium", it has 73,302 parameters.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{images/big.png}
+    \caption{Visualization of the architecture of the most accurate model (named "big").}
+    \label{fig:arch}
+\end{figure}
+
+From this point, we iterated on the architecture and the hyperparameters by measuring the test accuracy for each configuration after training for either 25 epochs, or until the validation loss stops improving. We created some variations on the model architecture, namely, a smaller and a bigger version of it. The small version removes one of the fully connected layers and halves the amount of nodes per layer. This "small" network has 19,414 parameters. The big version adds another 1D convolutional layer and increases the number of nodes per layer by a factor of about 2 to 4. This "big" network has 827,726 parameters.
+
+The results from our testing can be seen in \autoref{tab:results}. This table shows our best configuration having 32.7\% accuracy. In this configuration we use the "big" architecture, shown in \autoref{fig:arch}. A larger network seems needed to properly learn from out input, which is also relatively complex. 
+
+\subsubsection{Loss function}
+Out dataset can contain multiple notes per time unit, meaning we need a loss function that is compatible with multi-label output. Our output is either 1 or 0, which determines if a note should be played at that timestep and at that pitch.
+Initially, we used binary cross-entropy, because it is traditionally used for this sort of problem. However, we found that this resulted in lower performance than categorical cross-entropy. While this is counter-intuitive given the multilabel data, these findings are similar to observations in \cite{Mahajan_2018_ECCV}. Mean squared error was also tested, this loss function caused the network to converge much slower, but it did eventually achieve 22.9\% accuracy.
+
+\subsubsection{Optimizer}
+The optimizers tested were SGD with Nesterov momentum, Nadam and Adam. SGD with momentum. Using Nadam resulted in the largest testing accuracy, so this is the optimizer we used for our final model.
+
+\subsubsection{Window size}
+The window size determines how far back the LSTM gets data from relative to the current time step. A larger window size can mean the LSTM can learn longer dependencies and therefore lead to a more accurate network.
+
+\begin{table*}[]
+    \centering
+    \begin{tabular}{@{}llllrr@{}}
+        \toprule
+        \textbf{Network}               & \textbf{Loss}                               & \textbf{Optimizer}            & \textbf{Activation}             & \multicolumn{1}{l}{\textbf{Window size}}                                & \multicolumn{1}{l}{\textbf{Accuracy (\%)}} \\ \midrule
+        big                            & categorical crossentropy                    & SGD                           & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{28.3}                              \\
+        big                            & categorical crossentropy                    & \cellcolor[HTML]{9AFF99}Nadam & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{32.2}                              \\
+        big                            & \cellcolor[HTML]{FFCCC9}binary crossentropy & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.3}                              \\
+        big                            & \cellcolor[HTML]{FFCCC9}mean squared error  & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{25.4}                              \\
+        \cellcolor[HTML]{FFCCC9}medium & mean squared error                          & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{22.9}                              \\
+        big                            & categorical crossentropy                    & Nadam                         & \cellcolor[HTML]{FFCCC9}Softmax & \multicolumn{1}{r|}{96}                                                 & \textbf{0.9}                               \\
+        \cellcolor[HTML]{FFCCC9}medium & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{30.3}                              \\
+        \cellcolor[HTML]{FFCCC9}medium & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFCCC9}64}                         & \textbf{31.0}                              \\
+        big                            & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{9AFF99}128}                        & \textbf{32.7}                              \\
+        \cellcolor[HTML]{FFCCC9}small  & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.1}                              \\
+        big                            & categorical crossentropy                    & \cellcolor[HTML]{FFCCC9}Adam  & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFFFFF}{\color[HTML]{000000} 128}} & \textbf{29.2}                              \\
+        \bottomrule
+    \end{tabular}
+    \caption{Testing results of different training configurations. Accuracy measures test accuracy after 25 epochs or after the validation loss stops improving. Activation refers only to the activation of the output layer. Highlighted cells are changes from previous best configuration. }
+    \label{tab:results}
+\end{table*}
+\subsection{Training}
+Training was done for 25 epochs, or until the validation loss stopped improving. The accuracy and loss over epochs are plotted in \autoref{fig:loss} and \autoref{fig:acc}.
+\begin{figure}[H]
+    \includegraphics[width=\linewidth]{images/loss_bach_big_categorical_crossentropy_Nadam_sigmoid_n86_tps8_ws96.png}
+    \caption{Categorical cross-entropy loss plotted over epochs during training.}
+    \label{fig:loss}
+\end{figure}
+\begin{figure}[H]
+    \includegraphics[width=\linewidth]{images/acc_bach_big_categorical_crossentropy_Nadam_sigmoid_n86_tps8_ws96.png}
+    \caption{Accuracy plotted over epochs during training.}
+    \label{fig:acc}
+\end{figure}
+
+\subsection{Generation}
+% Explain LSTM gen (jorn)
+The output of our model can not be used directly to generate music, as the model will always learn that the most reliable prediction is to repeat the last note. Thus, if the song is generated by using a softmax or by applying a threshold to the output, the result will almost always be a single constant note. Instead, we treat the output as a probability vector, which is used to select a number of notes.
+
+At the start of the generation process, an output buffer is initialized, of which the first \texttt{window\_size} elements are copied from the end of the input data. Then, the following happens for each tick to be generated:
+
+\paragraph{Model output} The preceding \texttt{window\_size} elements are fed into the network to create the output $Y$. 
+
+\paragraph{Candidate notes} The number of potential (or candidate) notes $c$ is estimated using \autoref{eqn:candidates}, by counting the number of elements that are relatively probable to be selected.
+
+\begin{equation}\label{eqn:candidates}
+    c = \lvert \{ y \in Y : y > \max(Y) - 2\sigma(Y) \} \rvert
+\end{equation}
+
+
+\paragraph{Number of active notes} The number of active notes is computed by taking the \todo[inline]{weighted?}average of $c$, the number of active notes in the previous tick and the mean number of active notes in the input data. Additionally, the number of active notes may never be greater than the greatest number of active notes in the input data. This is done to prevent sudden changes to the number of active notes.
+\todo[inline]{Refer to active notes as $n_{active}$?}
+
+\paragraph{Threshold} All values smaller than 0.5\% of the maximum value in $Y$ are set to 0, to prevent them from being chosen.
+
+\paragraph{Encourage repeating notes} The original model behavior of repeating the last note is desirably to a certain degree. To make that outcome more likely, the probability for the notes active in the previous step is doubled.
+
+\paragraph{Choose notes} Finally, $Y$ is normalized and used as a probability vector to randomly choose the number of active notes to make active in the current step.
+
+\mbox{} % add a bit of vertical space
+
+When all notes are generated, a few post-processing operations are applied. The original input data is removed from the result, and if there is a window in the result where the notes are unchanged (which results in a period of silence), that is considered the end of the song. 
+
+Additionally, notes that were only active for a single tick before being deactivated again are removed from the result. While such behavior is quite possible in normal music, we found that their presence made the result sound more erratic than desired. 
+
+\begin{figure}[H]
+    \includegraphics[width=\linewidth]{images/lstm_samples.png}
+    \caption{Notes generated by the LSTM model. The vertical axis represents pitch, the horizontal axis represents time.}
+    \label{fig:lstm_predicted}
+\end{figure}
+
+\section{Results}
+
+
+
+% This is just for the web version
 \ifpdf
 \else
-\textbf{Generated using our hidden Markov model}
+\subsection{Generated music}
+Below you can listen to music generated by our hidden Markov model and our LSTM model. The LSTM model is only trained on Bach's music, so it can only predict Bach's music. The hidden Markov model uses only the start of the input song to predict the ending of it, meaning it can predict the ending of any song, albeit only a piano version.
 
 Original: Bach - The Art of Fugue (unfinished):
 
 startaudio midi/unfinpiano.wav endaudio
 
-Generated audio using a hidden Markov model, based on Bach - The Art of Fugue:
+Generated audio using a hidden Markov model, creating and ending for Bach - The Art of Fugue:
 
 startaudio midi/unfinpredicted.wav endaudio
+
+Generated audio using our LSTM model, creating and ending for Bach - The Art of Fugue:
+
+startaudio midi/lstmunfin.wav endaudio
 
 Original: Toto - Africa (piano version):
 
@@ -122,36 +273,19 @@ Generated audio using a hidden Markov model, based on Toto - Africa:
 
 startaudio midi/africapredicted.wav endaudio
 
-Original: Darude - Sandstorm (piano version):
-
-startaudio midi/sandstormpiano.wav endaudio
-
-Generated audio using a hidden Markov model, based on Darude - Sandstorm:
-
-startaudio midi/standstormpredicted.wav endaudio
 \fi
 
-\subsection{LSTM}
-
-\lipsum[1-5]
-
-
-\section{Results}
 \section{Discussion}
- 
+ We trained a deep LSTM sequential prediction model and have successfully got the model to learn musical concepts without any prior knowledge or supervision from experts.
+
+From the results, we can comfortably claim that we have accomplished what we aimed for in our research. We have built a model that is capable of autonomously generating the ending of a given classical song. We have successfully trained this one dataset of Bach's compositions and implemented by generating the ending to The Art of Fugue.
+
+We tried various types of loss functions and many variations in the architecture to build the best model we can (as discussed in Section \ref{architecture}). The output generated by the model has a good musical structure and does fit in well as a continuation of the unfinished composition. However, an expert in the field will be able to tell the difference between Bach's style of composition and the music generated by the model.
+
+This implementation may be further improved by trying out different input encodings that might be better suited for the network. Another approach using the 4 tracks of Bach's unfinished fugue separately for training the network instead of using them all together combined.
 
 \bibliographystyle{plain}
 \bibliography{references}
 
 
 \end{document}
-
-
-
-
-
-
-
-
-
-
