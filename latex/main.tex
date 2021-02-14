@@ -70,12 +70,15 @@
 \begin{abstract}
 \noindent
 The Art of the Fugue is Johann Sebastian Bach's incomplete musical work written in the last decade of his life. In this project, we are using multivariate LSTM and the MAESTRO dataset (V3.0.0) to generate 25 seconds of pseudo-Bach music that can serve as a part of Bach's unfinished fugue. 
+In training our model we try to determine the optimal loss function, optimizer and other hyperparameters. However, it's very difficult to create a loss function that is able to determine whether the generated music sounds 'good'. Therefore, for our final result, we evaluate the sound manually to determine how well the model performed.
 
-In training our model we will use a loss function, but its very difficult to create a loss function that is able to determine whether music sounds 'good'. Therefore, for our final result, we will evaluate the sound manually to determine how well the model performed.
+Our final LSTM network is able to produce piano music after training on Bach's compositions, we used this ability to generate an ending to Bach's unfinished fugue. \ifpdf
+In this report we show the findings visually, there is also an interactive version of this report where the reader can listen to the produced audio. This interactive version can be found at \url{https://ruurdbijlsma.github.io/bach-ex-machina/}.
+\fi
 
 \end{abstract}
 \section{Introduction}
-An interesting new application of the advances in the machine learning world is the artificial music generation. The ML models don't require explicit training by a human with extensive knowledge of music and it's composition. The models pick up on patterns of harmony and learn on their own. 
+An interesting new application of the advances in the machine learning world is the artificial music generation. The ML models don't require explicit training by a human with extensive knowledge of music and its composition. The models pick up on patterns of harmony and learn on their own. 
 
 In this paper, we use this methodology of artificial music generation for completing the unfinished composition of Johann Sebastian Bach, "The Art of the Fugue". We are using time-series based models to learn the respective patterns and generate a continuation of the unfinished composition. 
 \subsection{Problem}
@@ -115,9 +118,8 @@ To reduce the dimensions of the input and output of the models we strip the 2D i
     \label{fig:input_samples}
 \end{figure}
     
-\todo[inline]{Explain more data preparation stuff (end note, 88 notes ipv 128 notes, look at code for more}
 \subsection{Objectives}
-Our main objective for this project are to create a model capable of autonomously generating the ending of a given classical song that's played on a piano. Besides the model we want to create software making the process of generating the ending of a song relatively easy to do.
+Our main objective for this project is to create a model capable of autonomously generating the ending of a given classical song that's played on a piano. Besides the model we want to create software making the process of generating the ending of a song relatively easy to do.
 
 \section{Baseline Model}
 To help determine the success of our final LSTM model, we will compare it to a non-deep learning based model, namely a hidden Markov Model. We use a Gaussian hidden Markov model and train it on only one input song, Bach's unfinished fugue. The velocity values of the simplified representation are not used in this model, as this leads to more chaotic, less musical sounding results. By only feeding the model a 1 for a note pressed and 0 for silence, we can threshold the output of the model and tune it to audibly produce better results.
@@ -131,7 +133,7 @@ To help determine the success of our final LSTM model, we will compare it to a n
 
 We use a diagonal covariance type for this model. Since we do not know how many states there should be in this hidden Markov model, we calculated the Bayesian information criterion for a model train with every number of states from 1 to 70. The lowest scoring model is the model we used. The score for every number of states can be seen in \autoref{fig:bic}. The best model was found at N states = 36.
 
-The predicted samples from this model were thresholded to produce ones and zeroes, this thresholded 2D array was then converted to a MIDI file, and an image visualizing these notes. This image can be seen in \autoref{fig:hmm_samples}, the produced result would not fool an expert into thinking this was actually produced by Bach, but there is some musical structure to it. The model often produces notes that are held for only one tick, which does not happen happen in the input data.
+The predicted samples from this model were thresholded to produce ones and zeroes, this thresholded 2D array was then converted to a MIDI file, and an image visualizing these notes. This image can be seen in \autoref{fig:hmm_samples}, the produced result would not fool an expert into thinking this was actually produced by Bach, but there is some musical structure to it. The model often produces notes that are held for only one tick, which does not happen in the input data.
 
 
 \begin{figure}[ht]
@@ -161,10 +163,10 @@ The architecture of our final model is shown in \autoref{fig:arch}. The starting
 
 From this point, we iterated on the architecture and the hyperparameters by measuring the test accuracy for each configuration after training for either 25 epochs, or until the validation loss stops improving. We created some variations on the model architecture, namely, a smaller and a bigger version of it. The small version removes one of the fully connected layers and halves the amount of nodes per layer. This "small" network has 19,414 parameters. The big version adds another 1D convolutional layer and increases the number of nodes per layer by a factor of about 2 to 4. This "big" network has 827,726 parameters.
 
-The results from our testing can be seen in \autoref{tab:results}. This table shows our best configuration having 32.7\% accuracy. In this configuration we use the "big" architecture, shown in \autoref{fig:arch}. A larger network seems needed to properly learn from out input, which is also relatively complex. 
+The results from our testing can be seen in \autoref{tab:results}. This table shows our best configuration having 32.7\% accuracy. In this configuration we use the "big" architecture, shown in \autoref{fig:arch}. A larger network seems needed to properly learn from our input, which is also relatively complex. 
 
 \subsubsection{Loss function}
-Out dataset can contain multiple notes per time unit, meaning we need a loss function that is compatible with multi-label output. Our output is either 1 or 0, which determines if a note should be played at that timestep and at that pitch.
+Our dataset can contain multiple notes per time unit, meaning we need a loss function that is compatible with multi-label output. Our output is either 1 or 0, which determines if a note should be played at that time step and at that pitch.
 Initially, we used binary cross-entropy, because it is traditionally used for this sort of problem. However, we found that this resulted in lower performance than categorical cross-entropy. While this is counter-intuitive given the multilabel data, these findings are similar to observations in \cite{Mahajan_2018_ECCV}. Mean squared error was also tested, this loss function caused the network to converge much slower, but it did eventually achieve 22.9\% accuracy.
 
 \subsubsection{Optimizer}
@@ -178,17 +180,17 @@ The window size determines how far back the LSTM gets data from relative to the 
     \begin{tabular}{@{}llllrr@{}}
         \toprule
         \textbf{Network}               & \textbf{Loss}                               & \textbf{Optimizer}            & \textbf{Activation}             & \multicolumn{1}{l}{\textbf{Window size}}                                & \multicolumn{1}{l}{\textbf{Accuracy (\%)}} \\ \midrule
-        big                            & categorical crossentropy                    & SGD                           & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{28.3}                              \\
-        big                            & categorical crossentropy                    & \cellcolor[HTML]{9AFF99}Nadam & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{32.2}                              \\
-        big                            & \cellcolor[HTML]{FFCCC9}binary crossentropy & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.3}                              \\
+        big                            & categorical cross-entropy                    & SGD                           & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{28.3}                              \\
+        big                            & categorical cross-entropy                    & \cellcolor[HTML]{9AFF99}Nadam & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{32.2}                              \\
+        big                            & \cellcolor[HTML]{FFCCC9}binary cross-entropy & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.3}                              \\
         big                            & \cellcolor[HTML]{FFCCC9}mean squared error  & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{25.4}                              \\
         \cellcolor[HTML]{FFCCC9}medium & mean squared error                          & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{22.9}                              \\
-        big                            & categorical crossentropy                    & Nadam                         & \cellcolor[HTML]{FFCCC9}Softmax & \multicolumn{1}{r|}{96}                                                 & \textbf{0.9}                               \\
-        \cellcolor[HTML]{FFCCC9}medium & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{30.3}                              \\
-        \cellcolor[HTML]{FFCCC9}medium & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFCCC9}64}                         & \textbf{31.0}                              \\
-        big                            & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{9AFF99}128}                        & \textbf{32.7}                              \\
-        \cellcolor[HTML]{FFCCC9}small  & categorical crossentropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.1}                              \\
-        big                            & categorical crossentropy                    & \cellcolor[HTML]{FFCCC9}Adam  & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFFFFF}{\color[HTML]{000000} 128}} & \textbf{29.2}                              \\
+        big                            & categorical cross-entropy                    & Nadam                         & \cellcolor[HTML]{FFCCC9}Softmax & \multicolumn{1}{r|}{96}                                                 & \textbf{0.9}                               \\
+        \cellcolor[HTML]{FFCCC9}medium & categorical cross-entropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{30.3}                              \\
+        \cellcolor[HTML]{FFCCC9}medium & categorical cross-entropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFCCC9}64}                         & \textbf{31.0}                              \\
+        big                            & categorical cross-entropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{9AFF99}128}                        & \textbf{32.7}                              \\
+        \cellcolor[HTML]{FFCCC9}small  & categorical cross-entropy                    & Nadam                         & Sigmoid                         & \multicolumn{1}{r|}{96}                                                 & \textbf{27.1}                              \\
+        big                            & categorical cross-entropy                    & \cellcolor[HTML]{FFCCC9}Adam  & Sigmoid                         & \multicolumn{1}{r|}{\cellcolor[HTML]{FFFFFF}{\color[HTML]{000000} 128}} & \textbf{29.2}                              \\
         \bottomrule
     \end{tabular}
     \caption{Testing results of different training configurations. Accuracy measures test accuracy after 25 epochs or after the validation loss stops improving. Activation refers only to the activation of the output layer. Highlighted cells are changes from previous best configuration. }
@@ -222,14 +224,13 @@ At the start of the generation process, an output buffer is initialized, of whic
 \end{equation}
 
 
-\paragraph{Number of active notes} The number of active notes is computed by taking the \todo[inline]{weighted?}average of $c$, the number of active notes in the previous tick and the mean number of active notes in the input data. Additionally, the number of active notes may never be greater than the greatest number of active notes in the input data. This is done to prevent sudden changes to the number of active notes.
-\todo[inline]{Refer to active notes as $n_{active}$?}
+\paragraph{Number of active notes} The number of active notes $n$ is computed by taking the mean of $c$, the value of $n$ for the previous tick and the mean value for $n$ in the input data. Additionally, $n$ may never be greater than the greatest value for $n$ in the input data. This is done to prevent sudden changes to the number of active notes.
 
 \paragraph{Threshold} All values smaller than 0.5\% of the maximum value in $Y$ are set to 0, to prevent them from being chosen.
 
-\paragraph{Encourage repeating notes} The original model behavior of repeating the last note is desirably to a certain degree. To make that outcome more likely, the probability for the notes active in the previous step is doubled.
+\paragraph{Encourage repeating notes} The original model behavior of repeating the last note is desirable to a certain degree. To make that outcome more likely, the probability for the notes active in the previous step is doubled.
 
-\paragraph{Choose notes} Finally, $Y$ is normalized and used as a probability vector to randomly choose the number of active notes to make active in the current step.
+\paragraph{Choose notes} Finally, $Y$ is normalized and used as a probability vector to randomly choose $n$ notes to make active in the current step.
 
 \mbox{} % add a bit of vertical space
 
@@ -244,13 +245,18 @@ Additionally, notes that were only active for a single tick before being deactiv
 \end{figure}
 
 \section{Results}
+\label{sec:results}
+The accuracy achieved after different training configurations are shown in \autoref{tab:results}. From the table we can see that the accuracy measures of the test accuracy after 25 epochs or after the validation loss stops improving. Here, activation refers only to the activation of the output layer. The cells which are highlighted in the table represent changes from previous best configuration.
+
+We have also plotted a graph representing the accuracy of the model during the training of epochs which can be seen in figure 7. We can observe that as the training number of epoch’s increases, the validation accuracy is increased. The categorical cross-entropy which determines the loss over epochs can be seen in figure 6. The loss function caused the network to converge much slower but it eventually achieved an accuracy of 29\%.   
 
 
 
 % This is just for the web version
-\ifpdf
-\else
 \subsection{Generated music}
+\ifpdf
+Examples of the output for our hidden Markov model and our LSTM model can be found on the online version of this report\footnote{Available online at \url{https://ruurdbijlsma.github.io/bach-ex-machina/}}.
+\else
 Below you can listen to music generated by our hidden Markov model and our LSTM model. The LSTM model is only trained on Bach's music, so it can only predict Bach's music. The hidden Markov model uses only the start of the input song to predict the ending of it, meaning it can predict the ending of any song, albeit only a piano version.
 
 Original: Bach - The Art of Fugue (unfinished):
@@ -278,9 +284,9 @@ startaudio midi/africapredicted.wav endaudio
 \section{Discussion}
  We trained a deep LSTM sequential prediction model and have successfully got the model to learn musical concepts without any prior knowledge or supervision from experts.
 
-From the results, we can comfortably claim that we have accomplished what we aimed for in our research. We have built a model that is capable of autonomously generating the ending of a given classical song. We have successfully trained this one dataset of Bach's compositions and implemented by generating the ending to The Art of Fugue.
+From the results, we can comfortably claim that we have accomplished what we aimed for in our research. We have built a model that is capable of autonomously generating the ending of a given classical song. We have successfully trained a time-series model using a dataset of Bach's compositions. We then implemented this model to finish The Art of Fugue.
 
-We tried various types of loss functions and many variations in the architecture to build the best model we can (as discussed in Section \ref{architecture}). The output generated by the model has a good musical structure and does fit in well as a continuation of the unfinished composition. However, an expert in the field will be able to tell the difference between Bach's style of composition and the music generated by the model.
+We tried various types of loss functions and many variations in the architecture to build the best model we can (as discussed in Section \ref{architecture}). The output generated by the model has a good musical structure and does fit in well as a continuation of the unfinished composition. However, one can clearly tell the difference between Bach's style of composition and the music generated by the model.
 
 This implementation may be further improved by trying out different input encodings that might be better suited for the network. Another approach using the 4 tracks of Bach's unfinished fugue separately for training the network instead of using them all together combined.
 
@@ -289,3 +295,5 @@ This implementation may be further improved by trying out different input encodi
 
 
 \end{document}
+
+
